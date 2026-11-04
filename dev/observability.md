@@ -1,10 +1,14 @@
 # Forge observability and remote rollouts
 
 Opt-in integrations; `--run dummy` and local rollouts remain the defaults.
-Install the existing environment first, then layer on the integrations:
+The full integration stack requires **Python 3.11+** (`cwsandbox`'s minimum).
+The repo defaults to 3.11; baseline training still supports 3.10. Use a separate
+environment so an existing Python 3.10 environment is not replaced:
 
 ```bash
-uv sync --extra gpu --group dev
+uv venv --python 3.11 .venv-forge
+source .venv-forge/bin/activate
+uv sync --active --extra gpu --group dev
 uv pip install -r requirements-observability.txt
 export WANDB_ENTITY=your-team WANDB_PROJECT=nanochat
 export NANOCHAT_WEAVE=1
@@ -14,7 +18,7 @@ python -m scripts.chat_eval --source sft --task-name GSM8K --max-problems 8 --ru
 Use your runtime secret mechanism for `WANDB_API_KEY` and `CWSANDBOX_API_KEY`;
 never put credentials in CLI arguments, images, snapshots, or source control.
 The optional requirements are separate to preserve the baseline `uv.lock`.
-Rerunning `uv sync` can remove them; reinstall the requirements afterward.
+Rerunning `uv sync --active` can remove them; reinstall the requirements afterward.
 
 ## What is logged
 
@@ -30,7 +34,9 @@ Rerunning `uv sync` can remove them; reinstall the requirements afterward.
   gradient/memory/LR diagnostics. Remote mode separately logs weight-sync time.
 * **Standalone base/chat eval:** checkpoint/model config, BPB/accuracy/CORE,
   per-task wall time and bounded per-example tables. Stable task/example/sample
-  IDs support comparisons across runs and repeated evaluation steps.
+  IDs support comparisons across runs and repeated evaluation steps. Chat eval
+  uses the loaded checkpoint's metadata step for metrics, tables, artifacts and
+  traces, including when `--step` is omitted (latest checkpoint).
 * **Eval Tables:** `wandb.EvalTable` on the optional SDK version; old base SDKs
   fall back to `wandb.Table` with a warning. The feature is in Preview.
   Defaults: `NANOCHAT_EVAL_ROWS=64`, `NANOCHAT_TRACE_EXAMPLES=8` per task/eval,
@@ -134,6 +140,11 @@ traffic. This is a coherent demonstration, not a claim that every Forge product
 or every possible metric is applicable.
 
 ## Warm GPU rollout pool (GSM8K RL only)
+
+Worker startup uses the SDK's positional command API:
+`Sandbox.run("python", "-u", "-m", "scripts.rollout_worker", **options)`;
+`command=`/`args=` are not supported by `Sandbox.run`.
+See [Sandbox lifecycle](https://docs.coreweave.com/products/sandboxes/client/guides/sandbox-lifecycle#sandbox-run--immediate-start).
 
 Build/publish the worker image from this revision using
 `docker build -f dev/Dockerfile.rollout -t YOUR_REGISTRY/nanochat-rollout .`.

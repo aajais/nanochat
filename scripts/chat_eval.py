@@ -194,7 +194,7 @@ def run_chat_eval(task_name, model, tokenizer, engine,
     return acc
 
 
-if __name__ == "__main__":
+def main():
 
     # Parse command-line arguments
     parser = argparse.ArgumentParser()
@@ -217,7 +217,8 @@ if __name__ == "__main__":
     wandb_run = init_run("nanochat-eval", args.run, vars(args), args.run != "dummy" and ddp_rank == 0)
 
     model, tokenizer, meta = load_model(args.source, device, phase="eval", model_tag=args.model_tag, step=args.step)
-    log_model_config(model, args)
+    eval_step = meta["step"]
+    log_model_config(model, args, step=eval_step)
     engine = Engine(model, tokenizer)
 
     # Get the tasks to evaluate on
@@ -243,10 +244,10 @@ if __name__ == "__main__":
             temperature=args.temperature,
             top_k=args.top_k,
             max_problems=args.max_problems,
-            step=args.step or 0,
+            step=eval_step,
         )
         results[task_name] = acc
-        wandb_run.log({"step": args.step or 0, f"eval/{task_name}/accuracy": acc})
+        wandb_run.log({"step": eval_step, f"eval/{task_name}/accuracy": acc})
         print0(f"{task_name} accuracy: {100 * acc:.2f}%")
 
     # calculate the ChatCORE metric if we can (similar to CORE, it's the mean centered accuracy)
@@ -260,7 +261,11 @@ if __name__ == "__main__":
             centered_mean += centered_acc
         chatcore_metric = centered_mean / len(results)
         print0(f"ChatCORE metric: {chatcore_metric:.4f}")
-        wandb_run.log({"step": args.step or 0, "chatcore_metric": chatcore_metric})
+        wandb_run.log({"step": eval_step, "chatcore_metric": chatcore_metric})
 
     wandb_run.finish()
     compute_cleanup()
+
+
+if __name__ == "__main__":
+    main()

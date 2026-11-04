@@ -64,7 +64,6 @@ def sandbox_options(config):
     auth = AuthStrategy.COREWEAVE_API_KEY if os.getenv("CWSANDBOX_API_KEY") else AuthStrategy.WANDB
     options = dict(
         auth=auth, container_image=config.image,
-        command=["python", "-u", "-m", "scripts.rollout_worker"],
         placement_mode="serverless" if config.placement == "serverless" else "cks",
         placement_spillover="cks_then_serverless" if config.placement == "cks_then_serverless" else "strict",
         resources=ResourceOptions(requests={"cpu": config.cpu, "memory": config.memory},
@@ -131,7 +130,7 @@ class RolloutPool:
         try:
             options = sandbox_options(config)
             def start(_):
-                sandbox = Sandbox.run(**options)
+                sandbox = Sandbox.run("python", "-u", "-m", "scripts.rollout_worker", **options)
                 # Track immediately so partial startup failures still get cleaned up.
                 self.workers.append(sandbox)
                 sandbox.wait(timeout=config.startup_seconds)

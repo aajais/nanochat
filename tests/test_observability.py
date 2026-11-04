@@ -33,6 +33,7 @@ class FakeSandbox:
     instances = []
     snapshots = {}
     options = []
+    commands = []
 
     def __enter__(self):
         return self
@@ -41,8 +42,14 @@ class FakeSandbox:
         self.stop().result()
 
     @classmethod
-    def run(cls, **options):
+    def run(cls, *command, **options):
+        # Match cwsandbox >=1.14.2: startup command is positional-only.
+        if "command" in options or "args" in options:
+            raise TypeError("Sandbox.run takes positional command strings")
+        if not all(isinstance(part, str) for part in command):
+            raise TypeError("Sandbox.run expects strings, not a command list")
         cls.options.append(options)
+        cls.commands.append(command)
         worker = cls()
         worker.files = {}
         if "file_system_snapshot" in options:
@@ -114,6 +121,7 @@ class TinyConfig:
 class RolloutTests(unittest.TestCase):
     def setUp(self):
         FakeSandbox.instances, FakeSandbox.snapshots, FakeSandbox.options = [], {}, []
+        FakeSandbox.commands = []
         self.sdk = patch.dict("sys.modules", {"cwsandbox": fake_sdk()})
         self.sdk.start()
         self.auth = patch.dict(os.environ, {"CWSANDBOX_API_KEY": "test-not-a-credential"})
@@ -147,6 +155,17 @@ class RolloutTests(unittest.TestCase):
         self.assertNotIn("CWSANDBOX_API_KEY", options["environment_variables"])
         self.assertNotIn("WANDB_API_KEY", options["environment_variables"])
         self.assertNotIn("file_system_snapshot", options)
+        self.assertNotIn("command", options)
+        self.assertNotIn("args", options)
+
+    def test_worker_startup_uses_positional_command_strings(self):
+        with self.assertRaises(TypeError):
+            FakeSandbox.run(command=["python", "-m", "scripts.rollout_worker"])
+        pool = RolloutPool(self.config(), self.tokenizer)
+        try:
+            self.assertEqual(FakeSandbox.commands, [("python", "-u", "-m", "scripts.rollout_worker")])
+        finally:
+            pool.close()
 
     def test_runner_pinning_requires_strict_cks(self):
         with self.assertRaises(ValueError):
@@ -360,6 +379,11 @@ class ObservabilityTests(unittest.TestCase):
 
 
 class ArtifactTests(unittest.TestCase):
+    def test_default_python_supports_optional_sandbox_sdk(self):
+        root = Path(__file__).resolve().parents[1]
+        version = tuple(map(int, (root / ".python-version").read_text().strip().split(".")))
+        self.assertGreaterEqual(version, (3, 11))
+
     def test_inputs_are_verified_before_lineage_is_recorded(self):
         from nanochat.artifact_tracking import track_inputs
         from unittest.mock import Mock
