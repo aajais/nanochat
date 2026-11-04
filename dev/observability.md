@@ -46,13 +46,92 @@ Rerunning `uv sync` can remove them; reinstall the requirements afterward.
   and timing remain available without content. Generation seconds in each
   sample row is the whole batched generation time, not per-sequence latency.
 * **Artifacts:** `NANOCHAT_LOG_CHECKPOINTS=1` logs model weights + metadata at
-  existing save points. Upload/storage costs apply. Optimizer shards and the
-  tokenizer are intentionally excluded; this isn't a full resume bundle.
+  existing save points. `NANOCHAT_LOG_CODE=1` snapshots allowlisted source and
+  dependency manifests. `NANOCHAT_LOG_EVAL_ARTIFACTS=1` versions the same bounded,
+  privacy-filtered evaluation rows as durable evaluation artifacts, with task,
+  step, settings, timing, and verified input provenance. Input versions can be
+  checksum-verified and recorded as consuming edges (see the demo below).
+  Upload/storage costs apply. Checkpoints exclude optimizer shards/tokenizer;
+  publish the tokenizer separately. This isn't a full distributed resume bundle.
   Promote reviewed versions to your Registry through the usual artifact UI;
   no automatic production promotion or extra project/view is created.
 
 W&B's normal system monitor provides CPU/GPU utilization where supported.
 Gradient and timing metrics explicitly labeled `rank0` are not global maxima.
+
+## Artifact lineage demo: approved assets → run → model/evaluation outputs
+
+The publisher uploads **only explicitly listed files**, never recursively scans
+your cache, and waits for upload completion before printing its versioned path.
+Use a dedicated demo project via `WANDB_PROJECT` and group the runs with
+`WANDB_RUN_GROUP=observability-demo`. Do not enable content capture for private
+datasets just to populate the demo.
+
+```bash
+export NANOCHAT_LOG_CODE=1 NANOCHAT_LOG_CHECKPOINTS=1 NANOCHAT_LOG_EVAL_ARTIFACTS=1
+export WANDB_RUN_GROUP=observability-demo
+python -m scripts.artifact_assets publish --name demo-tokenizer --type tokenizer \
+  --file "tokenizer.pkl=$NANOCHAT_BASE_DIR/tokenizer/tokenizer.pkl" \
+  --file "token_bytes.pt=$NANOCHAT_BASE_DIR/tokenizer/token_bytes.pt"
+```
+
+Set `NANOCHAT_BASE_DIR` to your real cache directory before this command. Use
+the same publisher for approved pretraining shards (`--type dataset`, repeat
+`--file` for **every** shard used, including the held-out last shard), or an
+existing checkpoint (`--type model`, explicitly include its model and metadata
+files). Dataset uploads can be large and may be subject to licensing/privacy
+restrictions. Task loaders backed by Hugging Face are **not** automatically
+captured or pinned by this integration: do not label their data as versioned
+unless you have actually staged and configured those inputs.
+
+For reuse on a fresh runner, stage the printed immutable `entity/project/name:vN`
+into an **absent or empty** directory. This command creates no W&B run, does not
+overwrite existing data, and verifies checksums after download:
+
+```bash
+python -m scripts.artifact_assets stage \
+  --artifact "$TOKENIZER_ARTIFACT_VERSION" --root "$NANOCHAT_BASE_DIR/tokenizer"
+```
+
+Before running training/eval, create a JSON manifest matching the directories
+the normal loaders actually read. Example structure (substitute the printed
+version and your absolute path):
+
+```json
+[
+  {"artifact": "your-team/nanochat/demo-tokenizer:v0", "root": "/actual/nanochat-cache/tokenizer"}
+]
+```
+
+Set `NANOCHAT_INPUT_MANIFEST=/absolute/path/to/inputs.json`. Each enabled rank-zero
+run checks the **entire** listed directory against the immutable artifact before
+calling `run.use_artifact()`. Mutable aliases and unverifiable external references
+are rejected, as are missing, modified or extra files. No download/overwrite
+happens inside training. This records verified staged inputs, not proof that
+every file was used by the model: the caller must point the real loaders at those
+roots. Multi-node runs must stage identical inputs on every node; the verification
+here is rank-zero only. Do not modify those directories while a run is active.
+
+Run the normal training or evaluation command with an online `--run` name; no
+synthetic training metrics are generated. In Forge, inspect:
+
+1. **Run config / system charts:** resolved settings and hardware metrics.
+2. **Workspace:** loss/BPB/reward, gradient/memory/throughput curves and Eval Tables.
+3. **Artifacts graph:** tokenizer/dataset/checkpoint inputs → run → code/model/eval
+   outputs. Checkpoint/evaluation metadata repeats verified input versions/digests.
+4. **Weave Calls:** sampled eval children correlated with the producing run ID.
+5. **Sandboxes:** actual GPU workers, timings and reusable environment snapshot ID.
+6. **Registry:** optionally link a reviewed model version to an existing collection
+   via the UI. `latest` is not a quality guarantee; no automated approval or
+   production alias change is performed.
+
+Native workspace panels and reports can present these same run metrics without
+logging duplicate plots as images. Alerts/automations, a persistent report, and
+Registry governance need a chosen team/project and approval criteria; they are
+not silently created by this instrumentation. Inference/Post-Training/Agent Lens
+aren't added: this repo trains its own model and logs eval Calls, not hosted-agent
+traffic. This is a coherent demonstration, not a claim that every Forge product
+or every possible metric is applicable.
 
 ## Warm GPU rollout pool (GSM8K RL only)
 
@@ -154,6 +233,9 @@ by the tests.
 ## API references
 
 * [Eval Tables](https://docs.coreweave.com/products/wandb/evaltables/create-an-evaluation-table)
+* [Create artifacts](https://docs.coreweave.com/products/wandb/artifacts/construct-an-artifact)
+* [Input lineage and checksum verification](https://docs.coreweave.com/products/wandb/artifacts/download-and-use-an-artifact)
+* [Artifact tables](https://docs.coreweave.com/products/wandb/track/log/log-tables#artifact-tables)
 * [Manual Weave Calls](https://docs.coreweave.com/products/wandb/weave/guides/tracking/create-call)
 * [GPU Sandboxes](https://docs.coreweave.com/products/sandboxes/gpu-sandboxes)
 * [Placement/spillover](https://docs.coreweave.com/products/sandboxes/placement)

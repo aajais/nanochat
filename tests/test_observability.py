@@ -359,5 +359,102 @@ class ObservabilityTests(unittest.TestCase):
         self.assertIsNone(safe_calculator("1 / 0"))
 
 
+class ArtifactTests(unittest.TestCase):
+    def test_inputs_are_verified_before_lineage_is_recorded(self):
+        from nanochat.artifact_tracking import track_inputs
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as folder:
+            manifest = Path(folder) / "inputs.json"
+            manifest.write_text(json.dumps([{"artifact": "team/project/data:v2", "root": folder}]))
+            events = []
+            artifact = SimpleNamespace(manifest=SimpleNamespace(entries={}), digest="digest",
+                                       verify=lambda **kw: events.append(("verify", kw)))
+            run = SimpleNamespace(config={}, use_artifact=lambda value: events.append(("use", value)))
+            with patch.dict(os.environ, {"NANOCHAT_INPUT_MANIFEST": str(manifest)}), patch.object(wandb, "Api", return_value=SimpleNamespace(artifact=lambda ref: artifact)):
+                track_inputs(run)
+            self.assertEqual([e[0] for e in events], ["verify", "use"])
+            self.assertEqual(run.config["artifact_inputs_verified_rank0"][0]["digest"], "digest")
+            artifact.verify = Mock(side_effect=ValueError("checksum mismatch"))
+            events.clear()
+            with patch.dict(os.environ, {"NANOCHAT_INPUT_MANIFEST": str(manifest)}), patch.object(wandb, "Api", return_value=SimpleNamespace(artifact=lambda ref: artifact)):
+                with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                    track_inputs(run)
+            self.assertEqual(events, [])
+
+    def test_mutable_inputs_and_external_references_are_rejected(self):
+        from nanochat.artifact_tracking import track_inputs
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as folder:
+            manifest = Path(folder) / "inputs.json"
+            run = SimpleNamespace(config={}, use_artifact=Mock())
+            for ref in ("team/project/data:latest", "team/project/data:v2"):
+                manifest.write_text(json.dumps([{"artifact": ref, "root": folder}]))
+                artifact = SimpleNamespace(manifest=SimpleNamespace(entries={"data": SimpleNamespace(ref="s3://bucket/file")}))
+                with patch.dict(os.environ, {"NANOCHAT_INPUT_MANIFEST": str(manifest)}), patch.object(wandb, "Api", return_value=SimpleNamespace(artifact=lambda ref: artifact)):
+                    with self.assertRaises(ValueError):
+                        track_inputs(run)
+            run.use_artifact.assert_not_called()
+
+    def test_no_artifact_work_without_opt_in(self):
+        from nanochat.artifact_tracking import track_inputs, log_source, log_evaluation
+        with patch.dict(os.environ, {}, clear=True), patch.object(wandb, "Api") as api, patch.object(wandb, "Artifact") as construct:
+            track_inputs(None)
+            log_source(None)
+            log_evaluation(None, "task", 0, [], [], {}, 1.0)
+            api.assert_not_called()
+            construct.assert_not_called()
+
+    def test_checkpoint_and_evaluation_artifact_contents(self):
+        from nanochat.artifact_tracking import log_evaluation
+        captured = []
+        run = SimpleNamespace(id="test", config={}, log_artifact=lambda artifact, **kw: captured.append(artifact))
+        with tempfile.TemporaryDirectory() as folder, patch.object(obs, "active_run", return_value=run), patch.dict(os.environ, {"NANOCHAT_LOG_CHECKPOINTS": "1", "NANOCHAT_LOG_EVAL_ARTIFACTS": "1"}):
+            for name in ("model_000003.pt", "meta_000003.json", "optim_000003_rank0.pt"):
+                (Path(folder) / name).write_bytes(b"test")
+            obs.log_checkpoint(folder, 3)
+            self.assertEqual(set(captured[0].manifest.entries), {"model_000003.pt", "meta_000003.json"})
+            log_evaluation(run, "CORE/test", 3, ["example_id", "completion", "correct"], [["x", None, True]], {}, 1.2)
+            self.assertEqual(captured[1].type, "evaluation")
+            self.assertEqual(captured[1].metadata["sampled_rows_rank0"], 1)
+            self.assertIn("examples.table.json", captured[1].manifest.entries)
+
+    def test_source_artifact_is_allowlisted(self):
+        from nanochat.artifact_tracking import log_source
+        captured = []
+        run = SimpleNamespace(id="test", log_artifact=captured.append)
+        with patch.dict(os.environ, {"NANOCHAT_LOG_CODE": "1"}):
+            log_source(run)
+        names = set(captured[0].manifest.entries)
+        self.assertIn("nanochat/observability.py", names)
+        self.assertIn("uv.lock", names)
+        self.assertFalse(any(".env" in p or ".git/" in p or p.endswith(".pt") for p in names))
+
+    def test_stage_never_overwrites_and_requires_pinned_version(self):
+        from scripts.artifact_assets import stage
+        with tempfile.TemporaryDirectory() as folder:
+            (Path(folder) / "existing").write_text("keep")
+            with self.assertRaises(ValueError):
+                stage("team/project/data:v2", folder)
+            with self.assertRaises(ValueError):
+                stage("team/project/data:latest", folder)
+            self.assertEqual((Path(folder) / "existing").read_text(), "keep")
+
+    def test_publish_validates_explicit_paths_and_waits(self):
+        from scripts.artifact_assets import publish
+        from unittest.mock import Mock
+        logged = SimpleNamespace(name="dataset:v3", wait=Mock())
+        captured = []
+        run = SimpleNamespace(entity="team", project="project", log_artifact=lambda a: captured.append(a) or logged)
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "data.parquet"
+            source.write_bytes(b"approved")
+            self.assertEqual(publish(run, "dataset", "dataset", [f"data.parquet={source}"]), "team/project/dataset:v3")
+            logged.wait.assert_called_once()
+            self.assertEqual(set(captured[0].manifest.entries), {"data.parquet"})
+            for invalid in (f"../data={source}", f"/data={source}"):
+                with self.assertRaises(ValueError):
+                    publish(run, "dataset", "dataset", [invalid])
+
+
 if __name__ == "__main__":
     unittest.main()

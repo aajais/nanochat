@@ -22,6 +22,9 @@ def init_run(project, name, config, enabled=True):
     if not enabled:
         return DummyWandb()
     run = wandb.init(project=os.getenv("WANDB_PROJECT", project), name=name, config=config)
+    from nanochat.artifact_tracking import track_inputs, log_source
+    track_inputs(run)
+    log_source(run)
     run.define_metric("step")
     run.define_metric("*", step_metric="step")
     for key in ("train/loss", "val/bpb"):
@@ -84,7 +87,8 @@ def log_checkpoint(checkpoint_dir, step):
     if run is None or os.getenv("NANOCHAT_LOG_CHECKPOINTS") != "1":
         return
     artifact = wandb.Artifact(f"{run.id}-checkpoint", type="model",
-                              metadata={"step": step, "includes_optimizer": False})
+                              metadata={"step": step, "includes_optimizer": False,
+                                        "inputs": run.config.get("artifact_inputs_verified_rank0", [])})
     for filename in (f"model_{step:06d}.pt", f"meta_{step:06d}.json"):
         artifact.add_file(str(Path(checkpoint_dir) / filename))
     run.log_artifact(artifact, aliases=["latest", f"step-{step}"])
@@ -163,6 +167,8 @@ class Evaluation:
                 warnings.warn("wandb.EvalTable unavailable; logging a standard W&B Table. Upgrade wandb for Eval Tables.")
                 table = wandb.Table(columns=columns, data=self.rows)
             data[f"eval/{self.task}/examples"] = table
+            from nanochat.artifact_tracking import log_evaluation
+            log_evaluation(run, self.task, self.step, columns, self.rows, self.settings, elapsed)
         run.log(data)
 
 
