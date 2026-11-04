@@ -22,6 +22,8 @@ accidental destructive behavior, but it is not safe against malicious adversaria
 """
 
 import subprocess
+import math
+import os
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -94,6 +96,11 @@ def execute_code(
         >>> result.stdout
         'hello world\\n'
     """
+    backend = os.getenv("NANOCHAT_EXECUTION_BACKEND", "local")
+    if backend == "cwsandbox":
+        return _execute_remote(code, timeout, maximum_memory_bytes)
+    if backend != "local":
+        raise ValueError(f"Unknown NANOCHAT_EXECUTION_BACKEND: {backend}")
     # the guard runs first, then the untrusted code (with fresh globals, as a repr'd literal)
     guard = GUARD.format(maximum_memory_bytes=maximum_memory_bytes)
     program = guard + f"\nexec(compile({code!r}, '<llm>', 'exec'), {{'__name__': '__main__'}})\n"
@@ -132,3 +139,38 @@ def execute_code(
         memory_exceeded=memory_exceeded,
     )
     return result
+
+
+def _execute_remote(code, timeout, maximum_memory_bytes):
+    """Fresh container per program. Service/auth errors propagate; never fall back locally."""
+    from cwsandbox import AuthStrategy, NetworkOptions, ResourceOptions, Sandbox
+    from cwsandbox import SandboxTimeoutError
+    from nanochat.observability import trace_span
+
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("timeout must be finite and positive")
+    memory = max(512 * 1024 * 1024, maximum_memory_bytes or 0)
+    program = GUARD.format(maximum_memory_bytes=maximum_memory_bytes)
+    program += f"\nexec(compile({code!r}, '<llm>', 'exec'), {{'__name__': '__main__'}})\n"
+    with trace_span("nanochat.execute_code", {"backend": "cwsandbox", "timeout_seconds": timeout}) as output:
+        with Sandbox.run(
+            auth=AuthStrategy.COREWEAVE_API_KEY if os.getenv("CWSANDBOX_API_KEY") else AuthStrategy.WANDB,
+            placement_mode="serverless", # generated Python never runs on CKS GPU containers
+            container_image=os.getenv("NANOCHAT_SANDBOX_IMAGE", "python:3.11-slim"),
+            max_lifetime_seconds=max(120, math.ceil(timeout) + 60),
+            resources=ResourceOptions(requests={"cpu": "1", "memory": str(memory)}),
+            network=NetworkOptions(deny_egress=True, deny_ingress=True),
+        ) as sandbox:
+            output["sandbox_id"] = sandbox.sandbox_id
+            sandbox.wait(timeout=60)
+            try:
+                result = sandbox.exec(["python", "-I", "-c", program],
+                                      timeout_seconds=timeout).result()
+            except SandboxTimeoutError:
+                output.update({"success": False, "timeout": True})
+                return ExecutionResult(False, "", "", "Remote execution timed out", timeout=True)
+            success = result.returncode == 0
+            output.update({"success": success, "returncode": result.returncode})
+            error = None if success else (result.stderr.strip().splitlines() or ["Execution failed"])[-1]
+            return ExecutionResult(success, result.stdout, result.stderr, error,
+                                   memory_exceeded="MemoryError" in result.stderr)

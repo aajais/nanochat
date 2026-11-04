@@ -16,6 +16,7 @@ import torch.distributed as dist
 from nanochat.common import compute_init, compute_cleanup, get_dist_info, print0, autodetect_device_type
 from nanochat.checkpoint_manager import load_model
 from nanochat.engine import Engine
+from nanochat.observability import init_run, log_model_config, evaluation, generate_eval, score_eval, forward_eval
 
 from tasks.humaneval import HumanEval
 from tasks.mmlu import MMLU
@@ -40,8 +41,10 @@ def run_generative_eval(task_object, tokenizer, model, engine, num_samples, max_
         # Tokenize the prompt
         encoded_prompt = tokenizer.render_for_completion(conversation)
         # Get the completions
-        results, _ = engine.generate_batch(
+        results, _, generation_seconds = generate_eval(
+            engine,
             encoded_prompt,
+            problem_id=i,
             num_samples=num_samples,
             max_tokens=max_new_tokens,
             temperature=temperature,
@@ -51,7 +54,10 @@ def run_generative_eval(task_object, tokenizer, model, engine, num_samples, max_
         prefix_length = len(encoded_prompt)
         completions = [tokenizer.decode(result_tokens[prefix_length:]) for result_tokens in results]
         # Evaluate success criteria
-        outcomes = [task_object.evaluate(conversation, completion) for completion in completions]
+        outcomes = [score_eval(task_object, conversation, completion, i, sample_id,
+                              len(encoded_prompt), len(results[sample_id]) - prefix_length,
+                              generation_seconds)
+                    for sample_id, completion in enumerate(completions)]
         passed = any(outcomes)
 
         # Keep stats
@@ -111,7 +117,7 @@ def run_categorical_eval(task_object, tokenizer, model, batch_size, max_problems
 
         # Get the logits for the whole batch of conversations in parallel (efficiency win here)
         with torch.no_grad():
-            logits = model(prompt_ids) # (B, T, V)
+            logits = forward_eval(model, prompt_ids, i0) # (B, T, V)
 
         # Focus on the available answer on just the letters corresponding to choices
         # Note that this helps the evaluation a lot because it specifically narrows the focus to only the available letters
@@ -134,7 +140,8 @@ def run_categorical_eval(task_object, tokenizer, model, batch_size, max_problems
             argmax_letter_id = focus_logits.argmax(dim=-1).item()
             predicted_letter = letters[argmax_letter_id]
             # evaluate the outcome
-            outcome = task_object.evaluate(conversation, predicted_letter)
+            outcome = score_eval(task_object, conversation, predicted_letter, i0 + idx,
+                                 prompt_tokens=answer_pos + 1, completion_tokens=1)
             num_passed += int(outcome)
             total += 1
 
@@ -153,7 +160,7 @@ def run_categorical_eval(task_object, tokenizer, model, batch_size, max_problems
 
 # -----------------------------------------------------------------------------
 
-def run_chat_eval(task_name, model, tokenizer, engine,
+def _run_chat_eval(task_name, model, tokenizer, engine,
                    batch_size=1, num_samples=1, max_new_tokens=512, temperature=0.0, top_k=50,
                    max_problems=None):
     # Create the evaluation object
@@ -175,10 +182,23 @@ def run_chat_eval(task_name, model, tokenizer, engine,
     return acc
 
 # -----------------------------------------------------------------------------
+def run_chat_eval(task_name, model, tokenizer, engine,
+                  batch_size=1, num_samples=1, max_new_tokens=512, temperature=0.0, top_k=50,
+                  max_problems=None, step=0):
+    with evaluation(task_name, step=step, batch_size=batch_size, num_samples=num_samples,
+                    max_new_tokens=max_new_tokens, temperature=temperature, top_k=top_k,
+                    max_problems=max_problems) as output:
+        acc = _run_chat_eval(task_name, model, tokenizer, engine, batch_size, num_samples,
+                             max_new_tokens, temperature, top_k, max_problems)
+        output["accuracy"] = acc
+    return acc
+
+
 if __name__ == "__main__":
 
     # Parse command-line arguments
     parser = argparse.ArgumentParser()
+    parser.add_argument('--run', default='dummy', help="W&B run name; dummy disables logging")
     parser.add_argument('-i', '--source', type=str, required=True, help="Source of the model: sft|rl")
     parser.add_argument('-a', '--task-name', type=str, default=None, help="Task name. Default = all tasks. Use | to split multiple tasks.")
     parser.add_argument('-t', '--temperature', type=float, default=0.0)
@@ -194,8 +214,10 @@ if __name__ == "__main__":
 
     device_type = autodetect_device_type() if args.device_type == "" else args.device_type
     ddp, ddp_rank, ddp_local_rank, ddp_world_size, device = compute_init(device_type)
+    wandb_run = init_run("nanochat-eval", args.run, vars(args), args.run != "dummy" and ddp_rank == 0)
 
     model, tokenizer, meta = load_model(args.source, device, phase="eval", model_tag=args.model_tag, step=args.step)
+    log_model_config(model, args)
     engine = Engine(model, tokenizer)
 
     # Get the tasks to evaluate on
@@ -221,8 +243,10 @@ if __name__ == "__main__":
             temperature=args.temperature,
             top_k=args.top_k,
             max_problems=args.max_problems,
+            step=args.step or 0,
         )
         results[task_name] = acc
+        wandb_run.log({"step": args.step or 0, f"eval/{task_name}/accuracy": acc})
         print0(f"{task_name} accuracy: {100 * acc:.2f}%")
 
     # calculate the ChatCORE metric if we can (similar to CORE, it's the mean centered accuracy)
@@ -236,5 +260,7 @@ if __name__ == "__main__":
             centered_mean += centered_acc
         chatcore_metric = centered_mean / len(results)
         print0(f"ChatCORE metric: {chatcore_metric:.4f}")
+        wandb_run.log({"step": args.step or 0, "chatcore_metric": chatcore_metric})
 
+    wandb_run.finish()
     compute_cleanup()
