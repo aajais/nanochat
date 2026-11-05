@@ -142,13 +142,16 @@ class RolloutPool:
                 self._upload(sandbox, tokenizer_path, f"{ASSETS}/tokenizer/tokenizer.pkl")
                 return sandbox
             list(self.executor.map(start, range(config.workers)))
+            # A replacement pool has new IDs/settings within the same W&B run.
+            # Telemetry is part of construction: failures must stop workers too.
+            run = active_run()
+            if run is not None:
+                run.config.update({"rollout_pool": asdict(config),
+                                   "rollout_sandbox_ids_rank0": [w.sandbox_id for w in self.workers]},
+                                  allow_val_change=True)
         except BaseException:
             self.close()
             raise
-        run = active_run()
-        if run is not None:
-            run.config.update({"rollout_pool": asdict(config),
-                               "rollout_sandbox_ids_rank0": [w.sandbox_id for w in self.workers]})
 
     def _upload(self, sandbox, local_path, remote_path):
         def chunks():

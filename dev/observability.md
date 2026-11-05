@@ -174,6 +174,13 @@ creating replacement capacity. Normal exit/request failure stops the pool;
 hard termination relies on the configured lifetime cap. If stop fails, the
 warning includes the sandbox ID for manual cleanup in Forge Sandboxes.
 
+Pools can be closed and recreated within the same W&B run. The `rollout_pool`
+and `rollout_sandbox_ids_rank0` config fields describe the latest constructed
+pool (not a history) and explicitly allow value changes. Construction failures,
+including run lookup/config logging errors, shut down the executor and attempt
+to stop every started worker before propagating the error; failed stops retain
+the existing warning and process-exit retry.
+
 At each optimizer step, every worker receives the current state dict (safe
 `weights_only=True` load), then examples execute in parallel across workers.
 Only one request per worker is outstanding. IDs, policy version, sample counts,

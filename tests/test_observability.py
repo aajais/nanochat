@@ -11,7 +11,7 @@ from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import torch
 import wandb
@@ -166,6 +166,59 @@ class RolloutTests(unittest.TestCase):
             self.assertEqual(FakeSandbox.commands, [("python", "-u", "-m", "scripts.rollout_worker")])
         finally:
             pool.close()
+
+    def test_recreate_pool_updates_real_wandb_config_in_same_run(self):
+        run = SimpleNamespace(config=wandb.Config())
+        with patch("nanochat.rollouts.active_run", return_value=run):
+            first = RolloutPool(self.config(), self.tokenizer)
+            first_ids = list(run.config["rollout_sandbox_ids_rank0"])
+            first.close()
+            second = RolloutPool(self.config(workers=2), self.tokenizer)
+            try:
+                self.assertEqual(run.config["rollout_pool"]["workers"], 2)
+                self.assertEqual(run.config["rollout_sandbox_ids_rank0"],
+                                 [worker.sandbox_id for worker in second.workers])
+                self.assertNotEqual(run.config["rollout_sandbox_ids_rank0"], first_ids)
+            finally:
+                second.close()
+        self.assertTrue(all(worker.stopped for worker in FakeSandbox.instances))
+
+    def test_config_update_failure_cleans_constructor_workers_immediately(self):
+        failure = RuntimeError("telemetry unavailable")
+        run = SimpleNamespace(config=SimpleNamespace(update=Mock(side_effect=failure)))
+        with patch("nanochat.rollouts.active_run", return_value=run), \
+             patch("nanochat.rollouts.atexit.register") as register:
+            with self.assertRaises(RuntimeError) as raised:
+                RolloutPool(self.config(workers=2), self.tokenizer)
+            self.assertIs(raised.exception, failure)
+            self.assertEqual(len(FakeSandbox.instances), 2)
+            self.assertTrue(all(worker.stopped for worker in FakeSandbox.instances))
+            # No atexit callback has run: cleanup must also shut down the executor.
+            pool = register.call_args.args[0].__self__
+            self.assertEqual(pool.workers, [])
+            with self.assertRaises(RuntimeError):
+                pool.executor.submit(lambda: None)
+
+    def test_recreate_pool_updates_ids_with_unchanged_settings(self):
+        run = SimpleNamespace(config=wandb.Config())
+        with patch("nanochat.rollouts.active_run", return_value=run):
+            first = RolloutPool(self.config(), self.tokenizer)
+            first_ids = list(run.config["rollout_sandbox_ids_rank0"])
+            first.close()
+            second = RolloutPool(self.config(), self.tokenizer)
+            try:
+                self.assertNotEqual(run.config["rollout_sandbox_ids_rank0"], first_ids)
+                self.assertEqual(run.config["rollout_sandbox_ids_rank0"],
+                                 [worker.sandbox_id for worker in second.workers])
+            finally:
+                second.close()
+
+    def test_run_lookup_failure_cleans_constructor_workers_immediately(self):
+        with patch("nanochat.rollouts.active_run", side_effect=RuntimeError("run lookup failed")):
+            with self.assertRaisesRegex(RuntimeError, "run lookup failed"):
+                RolloutPool(self.config(workers=2), self.tokenizer)
+        self.assertEqual(len(FakeSandbox.instances), 2)
+        self.assertTrue(all(worker.stopped for worker in FakeSandbox.instances))
 
     def test_runner_pinning_requires_strict_cks(self):
         with self.assertRaises(ValueError):
