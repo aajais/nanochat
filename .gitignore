@@ -1,4 +1,5 @@
 .venv/
+.venv-forge/
 __pycache__/
 *.pyc
 dev-ignore/

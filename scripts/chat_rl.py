@@ -19,7 +19,10 @@ torchrun --standalone --nproc_per_node=8 -m scripts.chat_rl -- --run=default
 import argparse
 import os
 import itertools
+import time
+from collections import deque
 import wandb
+from nanochat.observability import init_run, log_model_config, optimizer_metrics, evaluation, generate_eval, score_eval
 import torch
 import torch.distributed as dist
 from nanochat.common import compute_init, compute_cleanup, print0, get_base_dir, DummyWandb, autodetect_device_type
@@ -57,7 +60,33 @@ parser.add_argument("--init-lr-frac", type=float, default=0.05, help="initial LR
 parser.add_argument("--eval-every", type=int, default=60, help="evaluate pass@k every N steps")
 parser.add_argument("--eval-examples", type=int, default=400, help="number of examples for pass@k evaluation")
 parser.add_argument("--save-every", type=int, default=60, help="save checkpoint every N steps")
+# Optional remote rollout capacity; each training rank owns this many workers.
+parser.add_argument("--rollout-workers", type=int, default=0, help="GPU sandbox workers per rank; 0 keeps local generation")
+parser.add_argument("--rollout-image", default=os.getenv("NANOCHAT_ROLLOUT_IMAGE", ""), help="worker image pinned by digest")
+parser.add_argument("--rollout-placement", choices=["cks", "serverless", "cks_then_serverless"], default="cks_then_serverless")
+parser.add_argument("--rollout-cpu", default="4")
+parser.add_argument("--rollout-memory", default="16Gi")
+parser.add_argument("--rollout-lifetime-seconds", type=int, default=3600)
+parser.add_argument("--rollout-startup-seconds", type=int, default=600)
+parser.add_argument("--rollout-request-seconds", type=int, default=300)
+parser.add_argument("--rollout-snapshot-id", default="", help="reuse a READY environment snapshot")
+parser.add_argument("--rollout-save-snapshot", action="store_true", help="capture environment caches after first rollout, rank zero only")
+parser.add_argument("--rollout-snapshot-size", default="20Gi")
+parser.add_argument("--rollout-runner-id", action="append", default=[], help="pin CKS runners; requires --rollout-placement=cks")
 args = parser.parse_args()
+if args.rollout_workers < 0:
+    parser.error("--rollout-workers must be nonnegative")
+if args.num_samples <= 0 or args.device_batch_size <= 0 or args.num_samples % args.device_batch_size:
+    parser.error("--num-samples must be a positive multiple of --device-batch-size")
+rollout_config = None
+if args.rollout_workers:
+    from nanochat.rollouts import RolloutConfig, RolloutPool
+    rollout_config = RolloutConfig(image=args.rollout_image, workers=args.rollout_workers,
+        placement=args.rollout_placement, cpu=args.rollout_cpu, memory=args.rollout_memory,
+        lifetime_seconds=args.rollout_lifetime_seconds, startup_seconds=args.rollout_startup_seconds,
+        request_seconds=args.rollout_request_seconds, snapshot_id=args.rollout_snapshot_id,
+        save_snapshot=args.rollout_save_snapshot and int(os.getenv("RANK", "0")) == 0,
+        snapshot_size=args.rollout_snapshot_size, runner_ids=tuple(args.rollout_runner_id))
 user_config = vars(args).copy()
 # -----------------------------------------------------------------------------
 
@@ -68,10 +97,11 @@ master_process = ddp_rank == 0 # this process will do logging, checkpointing etc
 
 # wandb logging init
 use_dummy_wandb = args.run == "dummy" or not master_process
-wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="nanochat-rl", name=args.run, config=user_config)
+wandb_run = init_run("nanochat-rl", args.run, user_config, not use_dummy_wandb)
 
 # Init model and tokenizer
 model, tokenizer, meta = load_model("sft", device, phase="eval", model_tag=args.model_tag, step=args.model_step)
+log_model_config(model, args)
 engine = Engine(model, tokenizer) # for sampling rollouts
 
 # -----------------------------------------------------------------------------
@@ -101,18 +131,24 @@ def get_batch():
         generated_token_sequences = []
         masks = []
         num_sampling_steps = args.num_samples // args.device_batch_size # go sequentially to prevent OOMs
-        for sampling_step in range(num_sampling_steps):
-            seed = hash((step, example_idx, sampling_step)) & 0x7FFFFFFF # positive half of int32
-            generated_token_sequences_batch, masks_batch = engine.generate_batch(
-                tokens,
-                num_samples=args.device_batch_size,
-                max_tokens=args.max_new_tokens,
-                temperature=args.temperature,
-                top_k=args.top_k,
-                seed=seed, # must make sure to change the seed for each sampling step
-            )
-            generated_token_sequences.extend(generated_token_sequences_batch)
-            masks.extend(masks_batch)
+        if rollout_pool is not None:
+            remote = pending_rollouts.popleft()
+            if remote["job_id"] != str(example_idx):
+                raise RuntimeError("Remote rollout example order mismatch")
+            generated_token_sequences, masks = remote["sequences"], remote["masks"]
+        else:
+            for sampling_step in range(num_sampling_steps):
+                seed = hash((step, example_idx, sampling_step)) & 0x7FFFFFFF # positive half of int32
+                generated_token_sequences_batch, masks_batch = engine.generate_batch(
+                    tokens,
+                    num_samples=args.device_batch_size,
+                    max_tokens=args.max_new_tokens,
+                    temperature=args.temperature,
+                    top_k=args.top_k,
+                    seed=seed, # must make sure to change the seed for each sampling step
+                )
+                generated_token_sequences.extend(generated_token_sequences_batch)
+                masks.extend(masks_batch)
 
         # Calculate the rewards for each sample
         rewards = []
@@ -167,8 +203,10 @@ def run_gsm8k_eval(task, tokenizer, engine,
         prefix_length = len(tokens)
         # Generate k samples using batched generation inside the Engine
         assert num_samples <= args.device_batch_size # usually this is true. we can add a loop if not...
-        generated_token_sequences, masks = engine.generate_batch(
+        generated_token_sequences, masks, generation_seconds = generate_eval(
+            engine,
             tokens,
+            problem_id=idx,
             num_samples=num_samples,
             max_tokens=max_completion_tokens,
             temperature=temperature,
@@ -176,10 +214,11 @@ def run_gsm8k_eval(task, tokenizer, engine,
         )
         # Check each sample for correctness
         outcomes = []
-        for sample_tokens in generated_token_sequences:
+        for sample_id, sample_tokens in enumerate(generated_token_sequences):
             generated_tokens = sample_tokens[prefix_length:]
             generated_text = tokenizer.decode(generated_tokens)
-            is_correct = task.evaluate(conversation, generated_text)
+            is_correct = score_eval(task, conversation, generated_text, idx, sample_id,
+                                    prefix_length, len(generated_tokens), generation_seconds)
             outcomes.append({
                 "is_correct": is_correct
             })
@@ -216,6 +255,13 @@ print0(f"Total sequences per step: {args.examples_per_step * args.num_samples}")
 assert args.examples_per_step % ddp_world_size == 0, "Desired examples per step must be divisible by the number of ranks"
 examples_per_rank = args.examples_per_step // ddp_world_size # per GPU
 print0(f"Calculated examples per rank: {examples_per_rank}")
+rollout_pool = None
+pending_rollouts = deque()
+remote_indices = itertools.cycle(range(ddp_rank, len(train_task), ddp_world_size))
+if rollout_config is not None:
+    if examples_per_rank > len(range(ddp_rank, len(train_task), ddp_world_size)):
+        raise ValueError("Remote rollout steps require distinct examples within each rank")
+    rollout_pool = RolloutPool(rollout_config, os.path.join(get_base_dir(), "tokenizer", "tokenizer.pkl"))
 
 # Kick off the training loop
 batch_iterator = get_batch()
@@ -226,7 +272,10 @@ for step in range(num_steps):
         model.eval()
         passk = torch.zeros(args.device_batch_size, device=device) # pass@k for k=1..device_batch_size
         records_iter = run_gsm8k_eval(val_task, tokenizer, engine, num_samples=args.device_batch_size, max_examples=args.eval_examples, temperature=1.0)
-        records = list(records_iter) # collect all records
+        with evaluation("GSM8K", step=step, num_samples=args.device_batch_size,
+                        max_examples=args.eval_examples, temperature=1.0) as eval_output:
+            records = list(records_iter) # collect all records
+            eval_output["examples_rank_local"] = len(records)
         for k in range(1, args.device_batch_size + 1):
             passk[k - 1] = sum(any(o["is_correct"] for o in r["outcomes"][:k]) for r in records)
         num_records = torch.tensor(len(records), dtype=torch.long, device=device)
@@ -245,9 +294,28 @@ for step in range(num_steps):
     # Forward/Backward on rollouts over multiple examples in the dataset
     rewards_list = []
     sequence_lengths = []
+    rollout_seconds = 0.0
+    policy_loss = 0.0
+    step_start = time.perf_counter()
+    if rollout_pool is not None:
+        model.eval()
+        sync_seconds = rollout_pool.sync(model, step)
+        jobs = [{"job_id": str(index), "tokens": tokenizer.render_for_completion(train_task[index]),
+                 "num_samples": args.num_samples, "batch_size": args.device_batch_size,
+                 "max_tokens": args.max_new_tokens, "temperature": args.temperature, "top_k": args.top_k,
+                 "seeds": [hash((step, index, s)) & 0x7FFFFFFF
+                           for s in range(args.num_samples // args.device_batch_size)]}
+                for index in itertools.islice(remote_indices, examples_per_rank)]
+        generation_start = time.perf_counter()
+        pending_rollouts.extend(rollout_pool.generate_many(jobs))
+        rollout_seconds = time.perf_counter() - generation_start
+        wandb_run.log({"step": step, "rollout/weight_sync_seconds_rank0": sync_seconds,
+                       "rollout/workers_per_rank": args.rollout_workers})
     for example_step in range(examples_per_rank):
         # Get one batch corresponding to one example in the training dataset
+        rollout_start = time.perf_counter()
         sequences_all, inputs_all, targets_all, rewards_all, advantages_all = next(batch_iterator)
+        rollout_seconds += time.perf_counter() - rollout_start
         # Evaluate the loss and gradients
         model.train() # ensure the model is in train mode
         # We need one more loop because we can never exceed the device_batch_size
@@ -271,6 +339,7 @@ for step in range(num_steps):
             # Finally, formulate the loss that we want to minimize (instead of objective we wish to maximize)
             loss = -pg_obj
             loss.backward()
+            policy_loss += loss.detach().item()
             print0(f"Step {step}/{num_steps} | Example step {example_step} | Pass {pass_idx} | loss: {loss.item():.6f} | Average reward: {rewards.mean().item()}")
         # For logging
         rewards_list.append(rewards_all.mean().item())
@@ -297,11 +366,16 @@ for step in range(num_steps):
     lrm = get_lr_multiplier(step)
     for group in optimizer.param_groups:
         group["lr"] = group["initial_lr"] * lrm
+    diagnostic_metrics = optimizer_metrics(model, optimizer)
     optimizer.step()
     model.zero_grad(set_to_none=True)
     wandb_run.log({
         "step": step,
         "lrm": lrm,
+        "train/policy_loss_rank0": policy_loss,
+        "rollout/wall_seconds_rank0": rollout_seconds,
+        "train/wall_seconds_rank0": time.perf_counter() - step_start,
+        **diagnostic_metrics,
     })
 
     # Master process saves the model once in a while. Skip first step. Save last step.
@@ -322,5 +396,7 @@ for step in range(num_steps):
         )
         print(f"✅ Saved model checkpoint to {checkpoint_dir}")
 
+if rollout_pool is not None:
+    rollout_pool.close()
 wandb_run.finish() # wandb run finish
 compute_cleanup()

@@ -238,6 +238,9 @@ def evaluate_example(idx, model, tokenizer, data, device, task_meta):
     else:
         raise ValueError(f"Unsupported task type: {task_type}")
 
+    from nanochat.observability import record_core_result
+    prediction = predicted_tokens if task_type == 'language_modeling' else pred_idx
+    record_core_result(idx, item, prediction, is_correct)
     return is_correct
 
 
@@ -251,7 +254,10 @@ def evaluate_task(model, tokenizer, data, device, task_meta):
     correct = torch.zeros(len(data), dtype=torch.float32, device=device)
     # stride the examples to each rank
     for idx in range(rank, len(data), world_size):
-        is_correct = evaluate_example(idx, model, tokenizer, data, device, task_meta)
+        from nanochat.observability import trace_core_example
+        with trace_core_example(idx) as output:
+            is_correct = evaluate_example(idx, model, tokenizer, data, device, task_meta)
+            output["correct"] = bool(is_correct)
         correct[idx] = float(is_correct)
     # sync results across all the processes if running distributed
     if world_size > 1:
