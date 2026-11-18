@@ -1,0 +1,8 @@
+wandb
+torch
+numpy
+tiktoken
+rustbpe
+filelock
+kernels
+weave==0.53.12

@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "name": "clinc150-support-fiveway",
+  "source_repository": "https://github.com/clinc/oos-eval",
+  "source_revision": "828f8093932c8fe6ca7936c3d2e52903b1c523de",
+  "source_data_sha256": "36923c3705a59e08fe9c3883d8bc2dd966ef93e22cb78ac41171782a698d56e0",
+  "source_license": "CC-BY-3.0",
+  "mapping": {
+    "billing": [
+      "bill_balance",
+      "bill_due",
+      "pay_bill"
+    ],
+    "account_access": [
+      "account_blocked",
+      "change_user_name"
+    ],
+    "technical_issue": [
+      "reset_settings",
+      "sync_device"
+    ],
+    "cancellation": [
+      "cancel_reservation"
+    ],
+    "unknown": [
+      "weather",
+      "tell_joke",
+      "recipe",
+      "translate",
+      "directions",
+      "restaurant_suggestion",
+      "play_music",
+      "calendar",
+      "alarm",
+      "shopping_list",
+      "nutrition_info",
+      "book_flight"
+    ]
+  },
+  "split_counts": {
+    "train": 1952,
+    "dev": 396,
+    "test": 600,
+    "challenge_dev": 99,
+    "challenge_test": 1000
+  },
+  "class_counts": {
+    "train": {
+      "unknown": 1184,
+      "account_access": 197,
+      "billing": 296,
+      "technical_issue": 176,
+      "cancellation": 99
+    },
+    "dev": {
+      "unknown": 238,
+      "account_access": 39,
+      "billing": 59,
+      "technical_issue": 40,
+      "cancellation": 20
+    },
+    "test": {
+      "unknown": 360,
+      "account_access": 60,
+      "billing": 90,
+      "technical_issue": 60,
+      "cancellation": 30
+    },
+    "challenge_dev": {
+      "unknown": 99
+    },
+    "challenge_test": {
+      "unknown": 1000
+    }
+  },
+  "source_intents": {
+    "train": {
+      "translate": 98,
+      "change_user_name": 99,
+      "restaurant_suggestion": 99,
+      "pay_bill": 99,
+      "nutrition_info": 100,
+      "calendar": 100,
+      "sync_device": 90,
+      "alarm": 98,
+      "bill_due": 97,
+      "account_blocked": 98,
+      "weather": 99,
+      "directions": 99,
+      "reset_settings": 86,
+      "book_flight": 100,
+      "shopping_list": 96,
+      "bill_balance": 100,
+      "play_music": 98,
+      "cancel_reservation": 99,
+      "tell_joke": 98,
+      "recipe": 99
+    },
+    "dev": {
+      "translate": 20,
+      "change_user_name": 20,
+      "restaurant_suggestion": 20,
+      "pay_bill": 19,
+      "nutrition_info": 20,
+      "calendar": 20,
+      "sync_device": 20,
+      "alarm": 19,
+      "bill_due": 20,
+      "account_blocked": 19,
+      "weather": 20,
+      "directions": 20,
+      "reset_settings": 20,
+      "book_flight": 20,
+      "shopping_list": 19,
+      "bill_balance": 20,
+      "play_music": 20,
+      "cancel_reservation": 20,
+      "tell_joke": 20,
+      "recipe": 20
+    },
+    "test": {
+      "translate": 30,
+      "change_user_name": 30,
+      "restaurant_suggestion": 30,
+      "pay_bill": 30,
+      "nutrition_info": 30,
+      "calendar": 30,
+      "sync_device": 30,
+      "alarm": 30,
+      "bill_due": 30,
+      "account_blocked": 30,
+      "weather": 30,
+      "directions": 30,
+      "reset_settings": 30,
+      "book_flight": 30,
+      "shopping_list": 30,
+      "bill_balance": 30,
+      "play_music": 30,
+      "cancel_reservation": 30,
+      "tell_joke": 30,
+      "recipe": 30
+    },
+    "challenge_dev": {
+      "oos": 99
+    },
+    "challenge_test": {
+      "oos": 1000
+    }
+  },
+  "file_sha256": {
+    "train.jsonl": "3102425210c6f3ae83955ff50861a59fa310b278c3f68470e2099df0b5ab767d",
+    "dev.jsonl": "31ad9e86bec39b4bd09eaff645471e1888e98b9156d85838ad042b3c12ac9af9",
+    "test.jsonl": "c22e7101e0e275ae9603ab7becdfce0043cce8c8f5d7d1bb1c5278f213cdd1f4",
+    "challenge_dev.jsonl": "b1a49a23bfac0469d6ec62db18adc5bec9bbb8f82a4d15d556268aa864623d76",
+    "challenge_test.jsonl": "bdd7300facc305b0682577f78fcad9adf1599b42e2b094f6c86cc977736eaeb7"
+  },
+  "dropped_count": 53,
+  "default_evaluation_split": "dev",
+  "release_qualification": false,
+  "synthetic_model_generated_rows": 0
+}
