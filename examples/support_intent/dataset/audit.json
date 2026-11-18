@@ -1,0 +1,334 @@
+{
+  "dropped_rows": [
+    {
+      "id": "clinc150-train-06456",
+      "reason": "normalized_duplicate"
+    },
+    {
+      "id": "clinc150-val-00747",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-01121",
+      "cosine_similarity": 0.9690188765525818
+    },
+    {
+      "id": "clinc150-val-01473",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-02193",
+      "cosine_similarity": 0.9823551177978516
+    },
+    {
+      "id": "clinc150-val-01946",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-02913",
+      "cosine_similarity": 0.9517013430595398
+    },
+    {
+      "id": "clinc150-val-02521",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03807",
+      "cosine_similarity": 0.9668278098106384
+    },
+    {
+      "id": "clinc150-oos_val-00055",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-oos_test-00983",
+      "cosine_similarity": 0.9883880615234375
+    },
+    {
+      "id": "clinc150-train-00073",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-00007",
+      "cosine_similarity": 0.9800517559051514
+    },
+    {
+      "id": "clinc150-train-00075",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-00007",
+      "cosine_similarity": 0.9646762013435364
+    },
+    {
+      "id": "clinc150-train-01852",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-00560",
+      "cosine_similarity": 1.0
+    },
+    {
+      "id": "clinc150-train-03511",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-00703",
+      "cosine_similarity": 0.9568831324577332
+    },
+    {
+      "id": "clinc150-train-03704",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-01122",
+      "cosine_similarity": 0.9795528650283813
+    },
+    {
+      "id": "clinc150-train-06420",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-01929",
+      "cosine_similarity": 0.9621730446815491
+    },
+    {
+      "id": "clinc150-train-06434",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-01286",
+      "cosine_similarity": 0.9661330580711365
+    },
+    {
+      "id": "clinc150-train-06446",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-01929",
+      "cosine_similarity": 0.9621730446815491
+    },
+    {
+      "id": "clinc150-train-06448",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-01946",
+      "cosine_similarity": 0.9999997019767761
+    },
+    {
+      "id": "clinc150-train-06460",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-01281",
+      "cosine_similarity": 0.9999999403953552
+    },
+    {
+      "id": "clinc150-train-06461",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-01289",
+      "cosine_similarity": 0.9999999403953552
+    },
+    {
+      "id": "clinc150-train-06462",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-01289",
+      "cosine_similarity": 0.9999999403953552
+    },
+    {
+      "id": "clinc150-train-06463",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-01296",
+      "cosine_similarity": 0.9886837005615234
+    },
+    {
+      "id": "clinc150-train-06489",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-01286",
+      "cosine_similarity": 0.9931704998016357
+    },
+    {
+      "id": "clinc150-train-07309",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-01471",
+      "cosine_similarity": 0.9684098958969116
+    },
+    {
+      "id": "clinc150-train-07323",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-02197",
+      "cosine_similarity": 0.985109806060791
+    },
+    {
+      "id": "clinc150-train-07701",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-02311",
+      "cosine_similarity": 0.9608161449432373
+    },
+    {
+      "id": "clinc150-train-07707",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-01558",
+      "cosine_similarity": 0.9721400141716003
+    },
+    {
+      "id": "clinc150-train-07795",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-01549",
+      "cosine_similarity": 0.977932870388031
+    },
+    {
+      "id": "clinc150-train-09781",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-01945",
+      "cosine_similarity": 0.9833132028579712
+    },
+    {
+      "id": "clinc150-train-09798",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-02935",
+      "cosine_similarity": 0.9657256007194519
+    },
+    {
+      "id": "clinc150-train-10858",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03251",
+      "cosine_similarity": 0.9640462398529053
+    },
+    {
+      "id": "clinc150-train-11607",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03482",
+      "cosine_similarity": 0.9551463723182678
+    },
+    {
+      "id": "clinc150-train-11904",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02390",
+      "cosine_similarity": 0.9792384505271912
+    },
+    {
+      "id": "clinc150-train-11905",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03576",
+      "cosine_similarity": 0.9824461340904236
+    },
+    {
+      "id": "clinc150-train-11907",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03576",
+      "cosine_similarity": 0.9824461340904236
+    },
+    {
+      "id": "clinc150-train-11910",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02399",
+      "cosine_similarity": 0.9585042595863342
+    },
+    {
+      "id": "clinc150-train-11912",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03597",
+      "cosine_similarity": 0.9529658555984497
+    },
+    {
+      "id": "clinc150-train-11917",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03570",
+      "cosine_similarity": 0.962364137172699
+    },
+    {
+      "id": "clinc150-train-11920",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03571",
+      "cosine_similarity": 0.9774874448776245
+    },
+    {
+      "id": "clinc150-train-11937",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03571",
+      "cosine_similarity": 0.9752835631370544
+    },
+    {
+      "id": "clinc150-train-11940",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03584",
+      "cosine_similarity": 0.9999999403953552
+    },
+    {
+      "id": "clinc150-train-11949",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02386",
+      "cosine_similarity": 0.9701588749885559
+    },
+    {
+      "id": "clinc150-train-11974",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02385",
+      "cosine_similarity": 0.9500616192817688
+    },
+    {
+      "id": "clinc150-train-11984",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02385",
+      "cosine_similarity": 0.9552184343338013
+    },
+    {
+      "id": "clinc150-train-11987",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02387",
+      "cosine_similarity": 0.9892190098762512
+    },
+    {
+      "id": "clinc150-train-11995",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02383",
+      "cosine_similarity": 0.9941769242286682
+    },
+    {
+      "id": "clinc150-train-12613",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03796",
+      "cosine_similarity": 0.9863560199737549
+    },
+    {
+      "id": "clinc150-train-12629",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-03797",
+      "cosine_similarity": 0.989608108997345
+    },
+    {
+      "id": "clinc150-train-12660",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02536",
+      "cosine_similarity": 0.9778008460998535
+    },
+    {
+      "id": "clinc150-train-12670",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02536",
+      "cosine_similarity": 0.9870830774307251
+    },
+    {
+      "id": "clinc150-train-13142",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02630",
+      "cosine_similarity": 0.9740839004516602
+    },
+    {
+      "id": "clinc150-train-13187",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02630",
+      "cosine_similarity": 0.9610800743103027
+    },
+    {
+      "id": "clinc150-train-13781",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-04118",
+      "cosine_similarity": 0.9862725138664246
+    },
+    {
+      "id": "clinc150-train-13812",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-04156",
+      "cosine_similarity": 0.9831587076187134
+    },
+    {
+      "id": "clinc150-train-13816",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-val-02767",
+      "cosine_similarity": 0.9827610850334167
+    },
+    {
+      "id": "clinc150-train-14480",
+      "reason": "lexical_near_duplicate",
+      "protected_id": "clinc150-test-04343",
+      "cosine_similarity": 0.9845921397209167
+    }
+  ],
+  "excluded_unmapped_source_rows": {
+    "train": 13000,
+    "val": 2600,
+    "test": 3900
+  },
+  "conflicting_normalized_texts": 0,
+  "near_duplicate_threshold": 0.95,
+  "near_duplicate_method": "char_wb TF-IDF3..5 cosine; public inputs only, no target-based selection",
+  "limitations": [
+    "No source conversation IDs or seed-family IDs available.",
+    "Semantic paraphrase leakage is not ruled out.",
+    "Public benchmark contamination in pretraining is unknown.",
+    "No hand-labeled injection/privacy suite is included."
+  ]
+}

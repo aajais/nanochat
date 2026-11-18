@@ -1,0 +1,32 @@
+{
+  "billing": [
+    "bill_balance",
+    "bill_due",
+    "pay_bill"
+  ],
+  "account_access": [
+    "account_blocked",
+    "change_user_name"
+  ],
+  "technical_issue": [
+    "reset_settings",
+    "sync_device"
+  ],
+  "cancellation": [
+    "cancel_reservation"
+  ],
+  "unknown": [
+    "weather",
+    "tell_joke",
+    "recipe",
+    "translate",
+    "directions",
+    "restaurant_suggestion",
+    "play_music",
+    "calendar",
+    "alarm",
+    "shopping_list",
+    "nutrition_info",
+    "book_flight"
+  ]
+}
