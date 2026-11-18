@@ -35,6 +35,7 @@ from nanochat.core_eval import evaluate_task
 from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit
 from nanochat.loss_eval import evaluate_bpb
 from nanochat.engine import Engine
+from nanochat.observability import init_run, log_model_config, evaluation
 
 # -----------------------------------------------------------------------------
 # CORE evaluation
@@ -54,7 +55,7 @@ def place_eval_bundle(file_path):
     print0(f"Placed eval_bundle directory at {eval_bundle_dir}")
 
 
-def evaluate_core(model, tokenizer, device, max_per_task=-1):
+def evaluate_core(model, tokenizer, device, max_per_task=-1, step=0):
     """
     Evaluate a base model on the CORE benchmark.
     Returns dict with results, centered_results, and core_metric.
@@ -106,7 +107,9 @@ def evaluate_core(model, tokenizer, device, max_per_task=-1):
         if max_per_task > 0:
             data = data[:max_per_task]
 
-        accuracy = evaluate_task(model, tokenizer, data, device, task_meta)
+        with evaluation(f"CORE/{label}", step=step, **task_meta) as output:
+            accuracy = evaluate_task(model, tokenizer, data, device, task_meta)
+            output["accuracy"] = accuracy
         results[label] = accuracy
         random_baseline = random_baselines[label]
         centered_result = (accuracy - 0.01 * random_baseline) / (1.0 - 0.01 * random_baseline)
@@ -127,6 +130,7 @@ def evaluate_core(model, tokenizer, device, max_per_task=-1):
 
 def main():
     parser = argparse.ArgumentParser(description="Base model evaluation")
+    parser.add_argument('--run', default='dummy', help="W&B run name; dummy disables logging")
     parser.add_argument('--eval', type=str, default='core,bpb,sample', help='Comma-separated evaluations to run: core,bpb,sample (default: all)')
     parser.add_argument('--model-tag', type=str, default=None, help='nanochat model tag to identify the checkpoint directory')
     parser.add_argument('--step', type=int, default=None, help='Model step to load (default = last)')
@@ -146,8 +150,10 @@ def main():
     # Distributed / precision setup
     device_type = autodetect_device_type() if args.device_type == '' else args.device_type
     ddp, ddp_rank, ddp_local_rank, ddp_world_size, device = compute_init(device_type)
+    wandb_run = init_run("nanochat-eval", args.run, vars(args), args.run != "dummy" and ddp_rank == 0)
     # Load model and tokenizer
     model, tokenizer, meta = load_model("base", device, phase="eval", model_tag=args.model_tag, step=args.step)
+    log_model_config(model, args)
     sequence_len = meta["model_config"]["sequence_len"]
     token_bytes = get_token_bytes(device=device)
     model_name = f"base_model (step {meta['step']})"
@@ -219,7 +225,7 @@ def main():
         print0("\n" + "="*80)
         print0("CORE Evaluation")
         print0("="*80)
-        core_results = evaluate_core(model, tokenizer, device, max_per_task=args.max_per_task)
+        core_results = evaluate_core(model, tokenizer, device, max_per_task=args.max_per_task, step=meta["step"])
 
         # Write CSV output
         if ddp_rank == 0:
@@ -236,6 +242,12 @@ def main():
             print0(f"\nResults written to: {output_csv_path}")
             print0(f"CORE metric: {core_results['core_metric']:.4f}")
 
+    metrics = {"step": meta["step"], **{f"{split}/bpb": value for split, value in bpb_results.items()}}
+    if core_results:
+        metrics.update({"core_metric": core_results["core_metric"],
+                        **{f"core/{task}": value for task, value in core_results["results"].items()}})
+    wandb_run.log(metrics)
+    wandb_run.finish()
     compute_cleanup()
 
 

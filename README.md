@@ -43,6 +43,10 @@ For development (adds pytest, matplotlib, ipykernel, transformers, etc.):
 uv sync --extra gpu --group dev
 ```
 
+For opt-in W&B metrics/Eval Tables, Weave evaluation traces, isolated code
+execution, and snapshot-ready CoreWeave GPU rollouts, see
+[Forge observability](dev/observability.md).
+
 ### Reproduce and talk to GPT-2
 
 The most fun you can have is to train your own GPT-2 and talk to it. The entire pipeline to do so is contained in the single file [runs/speedrun.sh](runs/speedrun.sh), which is designed to be run on an 8XH100 GPU node. Boot up a new 8XH100 GPU box from your favorite provider (e.g. I use and like [Lambda](https://lambda.ai/service/gpu-cloud)), and kick off the training script:

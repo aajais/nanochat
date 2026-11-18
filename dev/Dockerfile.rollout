@@ -1,0 +1,13 @@
+# Build from the repo root; publish and pass the resulting immutable image digest.
+# System/build tools live in the image, not the snapshot mount.
+ARG BASE_IMAGE=pytorch/pytorch:2.9.1-cuda12.8-cudnn9-devel
+FROM ${BASE_IMAGE}
+WORKDIR /opt/nanochat
+# Only generation imports are needed; no training datasets or credentials.
+RUN python -m pip install --no-cache-dir \
+    'filelock>=3.19.0' 'numpy>=1.26.0' 'rustbpe>=0.1.0' \
+    'tiktoken>=0.11.0' 'kernels>=0.11.7' 'wandb>=0.21.3'
+COPY nanochat/ nanochat/
+COPY scripts/rollout_worker.py scripts/rollout_worker.py
+ENV PYTHONPATH=/opt/nanochat PYTHONUNBUFFERED=1
+CMD ["python", "-u", "-m", "scripts.rollout_worker"]

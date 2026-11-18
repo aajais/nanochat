@@ -22,6 +22,7 @@ from dataclasses import asdict
 from contextlib import contextmanager
 
 import wandb
+from nanochat.observability import init_run, log_model_config, optimizer_metrics
 import torch
 import torch.distributed as dist
 
@@ -97,7 +98,7 @@ print0(f"COMPUTE_DTYPE: {COMPUTE_DTYPE} ({COMPUTE_DTYPE_REASON})")
 
 # wandb logging init
 use_dummy_wandb = args.run == "dummy" or not master_process
-wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="nanochat", name=args.run, config=user_config)
+wandb_run = init_run("nanochat", args.run, user_config, not use_dummy_wandb)
 
 # Flash Attention status
 from nanochat.flash_attention import USE_FA3
@@ -408,6 +409,9 @@ tokens_per_fwdbwd = args.device_batch_size * args.max_seq_len # tokens per itera
 world_tokens_per_fwdbwd = tokens_per_fwdbwd * ddp_world_size # total tokens per iteration for all ranks
 assert total_batch_size % world_tokens_per_fwdbwd == 0, f"total_batch_size ({total_batch_size}) must be a multiple of {world_tokens_per_fwdbwd}."
 grad_accum_steps = total_batch_size // world_tokens_per_fwdbwd
+log_model_config(orig_model, args, total_batch_size=total_batch_size,
+                 grad_accum_steps=grad_accum_steps, num_iterations=num_iterations,
+                 flash_attention_3=using_fa3)
 print0(f"Tokens / micro-batch / rank: {args.device_batch_size} x {args.max_seq_len} = {tokens_per_fwdbwd:,}")
 print0(f"Tokens / micro-batch: {world_tokens_per_fwdbwd:,}")
 print0(f"Total batch size {total_batch_size:,} => gradient accumulation steps: {grad_accum_steps}")
@@ -442,7 +446,7 @@ while True:
     if args.core_metric_every > 0 and (last_step or (step > 0 and step % args.core_metric_every == 0)):
         model.eval()
         with disable_fp8(orig_model):
-            results = evaluate_core(orig_model, tokenizer, device, max_per_task=args.core_metric_max_per_task)
+            results = evaluate_core(orig_model, tokenizer, device, max_per_task=args.core_metric_max_per_task, step=step)
         print0(f"Step {step:05d} | CORE metric: {results['core_metric']:.4f}")
         wandb_run.log({
             "step": step,
@@ -533,9 +537,11 @@ while True:
         if is_ddp_initialized():
             for v in scaler._found_inf_per_device(optimizer).values():
                 dist.all_reduce(v, op=dist.ReduceOp.MAX)
+        diagnostic_metrics = optimizer_metrics(orig_model, optimizer) if step % 100 == 0 else {}
         scaler.step(optimizer)
         scaler.update()
     else:
+        diagnostic_metrics = optimizer_metrics(orig_model, optimizer) if step % 100 == 0 else {}
         optimizer.step()
     model.zero_grad(set_to_none=True)
     train_loss_f = train_loss.item() # .item() is a CPU-GPU sync point
@@ -571,6 +577,8 @@ while True:
             "total_training_flops": flops_so_far,
             "total_training_time": total_training_time,
             "train/loss": debiased_smooth_loss,
+            "train/loss_raw": train_loss_f,
+            **diagnostic_metrics,
             "train/lrm": lrm,
             "train/dt": dt,
             "train/tok_per_sec": tok_per_sec,
