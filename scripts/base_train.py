@@ -511,15 +511,17 @@ while True:
     # evaluate the gradient
     synchronize()
     t0 = time.time()
+    train_loss = torch.zeros((), dtype=torch.float32, device=device)
     for micro_step in range(grad_accum_steps):
         loss = model(x, y)
-        train_loss = loss.detach() # for logging
+        train_loss += loss.detach() # rank-local mean across all micro-batches
         loss = loss / grad_accum_steps # each .backward() is a grad sum => normalize loss here
         if scaler is not None:
             scaler.scale(loss).backward()
         else:
             loss.backward()
         x, y, dataloader_state_dict = next(train_loader) # prefetch the next batch while the GPU is busy with forward/backward
+    train_loss /= grad_accum_steps
     # step the optimizer
     lrm = get_lr_multiplier(step)
     muon_momentum = get_muon_momentum(step)
