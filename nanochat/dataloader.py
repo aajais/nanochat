@@ -73,7 +73,7 @@ def _document_batches(split, resume_state_dict, tokenizer_batch_size):
 
 def tokenizing_distributed_data_loader_with_state_bos_bestfit(
     tokenizer, B, T, split,
-    tokenizer_threads=4, tokenizer_batch_size=128,
+    tokenizer_threads=1, tokenizer_batch_size=128,
     device="cuda", resume_state_dict=None,
     buffer_size=1000
 ):

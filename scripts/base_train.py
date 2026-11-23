@@ -25,12 +25,14 @@ import wandb
 from nanochat.observability import init_run, log_model_config, optimizer_metrics
 import torch
 import torch.distributed as dist
+from big_runtime import budget_stop, require_finite_loss, require_finite_gradients, require_finite_validation
+from big_runtime import checkpoint as save_checkpoint
 
 from nanochat.gpt import GPT, GPTConfig, Linear
 from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit, tokenizing_distributed_data_loader_with_state_bos_bestfit
 from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, print_banner, get_base_dir, autodetect_device_type, get_peak_flops, COMPUTE_DTYPE, COMPUTE_DTYPE_REASON, is_ddp_initialized
 from nanochat.tokenizer import get_tokenizer, get_token_bytes
-from nanochat.checkpoint_manager import save_checkpoint, load_checkpoint
+from nanochat.checkpoint_manager import load_checkpoint
 from nanochat.loss_eval import evaluate_bpb
 from nanochat.engine import Engine
 from nanochat.flash_attention import HAS_FA3
@@ -418,16 +420,20 @@ print0(f"Total batch size {total_batch_size:,} => gradient accumulation steps: {
 
 # Go!
 while True:
-    last_step = step == num_iterations # loop runs num_iterations+1 times so that we can eval/save at the end
+    # All eight ranks stop together at the token horizon OR approved wall budget.
+    # Evaluate and checkpoint the actual stopping step before normal cleanup.
+    pilot_budget_stop = budget_stop(device)
+    last_step = step == num_iterations or pilot_budget_stop
     flops_so_far = num_flops_per_token * total_batch_size * step
 
     # once in a while: evaluate the val bpb (all ranks participate)
-    if args.eval_every > 0 and (last_step or step % args.eval_every == 0):
+    if args.eval_every > 0 and (last_step or step % args.eval_every == 0 or step == 100 or (args.save_every > 0 and step > 0 and step % args.save_every == 0)):
         model.eval()
         val_loader = build_val_loader()
         eval_steps = args.eval_tokens // (args.device_batch_size * args.max_seq_len * ddp_world_size)
         with disable_fp8(model):
             val_bpb = evaluate_bpb(model, val_loader, eval_steps, token_bytes)
+        require_finite_validation(val_bpb,device)
         print0(f"Step {step:05d} | Validation bpb: {val_bpb:.6f}")
         if val_bpb < min_val_bpb:
             min_val_bpb = val_bpb
@@ -478,12 +484,12 @@ while True:
         model.train()
 
     # save checkpoint: at the end of the run, or every save_every steps, except at the first step or the resume step
-    if last_step or (step > 0 and step != args.resume_from_step and args.save_every > 0 and step % args.save_every == 0):
+    if last_step or (step > 0 and step != args.resume_from_step and args.save_every > 0 and (step == 100 or step % args.save_every == 0)):
         save_checkpoint(
             checkpoint_dir,
             step,
             orig_model.state_dict(), # model parameters
-            optimizer.state_dict(), # optimizer state
+            optimizer.state_dict() if last_step else None, # terminal: all eight optimizer shards
             { # metadata saved as json
                 "step": step,
                 "val_bpb": val_bpb, # loss at last step
@@ -514,6 +520,7 @@ while True:
     train_loss = torch.zeros((), dtype=torch.float32, device=device)
     for micro_step in range(grad_accum_steps):
         loss = model(x, y)
+        require_finite_loss(loss)
         train_loss += loss.detach() # rank-local mean across all micro-batches
         loss = loss / grad_accum_steps # each .backward() is a grad sum => normalize loss here
         if scaler is not None:
@@ -543,11 +550,17 @@ while True:
         scaler.step(optimizer)
         scaler.update()
     else:
+        synchronized_grad_norm = require_finite_gradients(orig_model)
         diagnostic_metrics = optimizer_metrics(orig_model, optimizer) if step % 100 == 0 else {}
+        if step % 100 == 0:
+            diagnostic_metrics['train/grad_guard_rank0'] = synchronized_grad_norm
+            diagnostic_metrics['train/nonfinite_any_rank'] = 0
         optimizer.step()
     model.zero_grad(set_to_none=True)
     train_loss_f = train_loss.item() # .item() is a CPU-GPU sync point
     synchronize()
+    from big_runtime import mark_training_started
+    mark_training_started(train_loss_f,step)
     t1 = time.time()
     dt = t1 - t0
     # -------------------------------------------------------------------------
@@ -608,6 +621,12 @@ print0(f"Peak memory usage: {get_max_memory() / 1024 / 1024:.2f}MiB")
 print0(f"Total training time: {total_training_time/60:.2f}m")
 if val_bpb is not None:
     print0(f"Minimum validation bpb: {min_val_bpb:.6f}")
+
+# One end-of-pilot evaluation on disjoint public validation documents.
+if os.environ.get("NANOCHAT_PILOT_HOLDOUT") == "1":
+    from pilot_hooks import evaluate_holdout
+    evaluate_holdout(orig_model, tokenizer, device, token_bytes, args, step, evaluate_bpb,
+                     tokenizing_distributed_data_loader_bos_bestfit)
 
 # cleanup
 wandb_run.finish() # wandb run finish
