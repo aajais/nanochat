@@ -1,0 +1,104 @@
+{
+  "owner": "Aayush Jaiswal",
+  "scope": "internal demo only",
+  "workflow_sha256": "ea9a8077334fc3956b9a026d741ce7912663ec35be73cf347edb9d6614a7d7ca",
+  "assets": {
+    "candidate": {
+      "ref": "wandb/nanochat-demo/conversation-sft-cache-candidate:v3",
+      "digest": "422781a16b8306e6cf80a73bdd0c6d42",
+      "sha256": {
+        "manifest.json": "eed22414c57c434baf26765fd94dd0d3f7648cb2d6584521e7d86c9da971f56d",
+        "train.jsonl": "21b44c86d8c181623588319f5d2052bd048d2a21e8816c9ceff5f3141faadaa9",
+        "dev.jsonl": "2370ed7deb3521c65a7144663cdaf017820af3e1947c4da0495e963e82e62fd5"
+      }
+    },
+    "evaluator": {
+      "ref": "wandb/nanochat-demo/nanochat-conversation-evaluation-runner:v2",
+      "digest": "96e0ea42a416c1971f25d1f51e112d7e"
+    },
+    "fixtures": {
+      "ref": "wandb/nanochat-demo/nanochat-conversation-demo-evals:v1",
+      "digest": "e5035e9b4e6bbe3bc3f26d4cd2428022",
+      "sha256": {
+        "development.json": "14e83fe79cf00b29521a1f217f38d8c2acd89c57832b2fe119518dc79818aa8e",
+        "acceptance_primary.json": "24567fb37946c380e9ed75dd71990aa5bdb63b85e39c731e8936d98ef8af78d5",
+        "acceptance_correction.json": "7d8114fc999fc638818387a31f355e68d8f9d5e305e18f4a293b2da6ba1b17b3",
+        "protocol.json": "a4851c73a61ad963586dfe2c915d02150e43121de5a3f5433160886c34adaf60"
+      }
+    },
+    "tokenizer": {
+      "ref": "wandb/nanochat-demo/pr1-smoke-tokenizer:v0",
+      "digest": "d4447a232590e1a7a3bc5e79832c0e00",
+      "sha256": {
+        "tokenizer.pkl": "a228803c68627f650e640c819e71ea0b90f49a96118858ed781a00a5ba63b6bf"
+      }
+    },
+    "base": {
+      "ref": "wandb/nanochat-demo/b1384b1-checkpoint:v2",
+      "digest": "c07a4b33a3081fab517e5265cc8a79ed",
+      "sha256": {
+        "model_133632.pt": "c76eb3a6e3c482647e7d0f0f7077689369d060593762803678e2d1d4fcbbdbf0",
+        "meta_133632.json": "7ef3096f4dbc72b4a7a7f879aed0a0f69abc810317046183349741f8b9decaec"
+      }
+    },
+    "arc": {
+      "ref": "wandb/nanochat-demo/e1384arc-benchmark-inputs:v0",
+      "digest": "0249e46d1797d4399103e3f6d8108e75",
+      "sha256": {
+        "benchmark-inputs.json": "7646c854f9f1c475efeb2a852a9f3b668d8275f361832d34200111686a402d30"
+      }
+    },
+    "historical_arc_code": {
+      "ref": "wandb/nanochat-demo/code-nanochat-1384m-arc100-text10-20261123:v0",
+      "digest": "8379abd3096485246442bbdfe033eb3b"
+    }
+  },
+  "decisions": {
+    "retained_content": {
+      "status": "pending",
+      "reviewer": "",
+      "evidence": ""
+    },
+    "corrected_fixtures": {
+      "status": "pending",
+      "reviewer": "",
+      "evidence": ""
+    },
+    "license_notice_disposition": {
+      "status": "pending",
+      "reviewer": "",
+      "evidence": "",
+      "dispositions": {
+        "apache_components": "",
+        "metamath_mit": "",
+        "gsm8k_underlying": "",
+        "math_underlying": "",
+        "llama31_outputs": "",
+        "source_dependencies": ""
+      },
+      "notice_bundle": {}
+    },
+    "selection_policy": {
+      "status": "pending",
+      "reviewer": "",
+      "evidence": "",
+      "policy": "mechanical_development_then_human_release_hold"
+    },
+    "gpu_execution": {
+      "status": "pending",
+      "reviewer": "",
+      "evidence": "",
+      "total_seconds_including_prior": 7200,
+      "gpu_count": 8,
+      "gpu_model": "NVIDIA L40",
+      "world_size": 8,
+      "budget_basis": "shared_wall_clock",
+      "capacity_evidence": {
+        "eight_l40_one_node_confirmed": false,
+        "source": "",
+        "observed_at_utc": ""
+      }
+    }
+  },
+  "source_export_only": true
+}
