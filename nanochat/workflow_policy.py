@@ -8,12 +8,36 @@ from nanochat.sft_runtime import sha256
 TOTAL=7200
 PRIOR=87
 CAP=TOTAL-PRIOR
-READINESS=780
+# Source proposal only: republishing and fresh explicit approval are required.
+# Borrow from main SFT, never extend the shared total or downstream reserves.
+READINESS=2400
 EVALUATION=1500
 PACKAGING=600
 EXIT=60
 TRAIN_SAVE=600
 REQUIRED_DECISIONS=('retained_content','corrected_fixtures','license_notice_disposition','selection_policy','gpu_execution')
+
+def readiness_projection(result, elapsed_seconds, remaining_seconds):
+    """Measured planning estimate, never proof or permission to omit a probe."""
+    costs = [entry.get('checkpoint_elapsed_seconds') for entry in result.get('uploads', [])]
+    if len(costs) < 2 or any(not isinstance(x,(int,float)) or isinstance(x,bool)
+            or not math.isfinite(x) or x <= 0 for x in costs):
+        raise ValueError('Measured checkpoint publication timings required')
+    if any(not isinstance(x,(int,float)) or not math.isfinite(x) or x < 0
+           for x in (elapsed_seconds, remaining_seconds)):
+        raise ValueError('Invalid readiness elapsed/remaining time')
+    if sum(costs) > elapsed_seconds + 1:
+        raise ValueError('Checkpoint timings exceed stage elapsed time')
+    overhead = max(15., elapsed_seconds-sum(costs))
+    # Three publications (replay/signal/deadline), four launches (incl failure),
+    # pause + verification allowance and 25% margin. Still execute every probe.
+    estimate = 1.25*(3*max(costs)+4*overhead+30+60)
+    return dict(required_remaining_seconds=estimate, available_seconds=remaining_seconds,
+        fits=remaining_seconds >= estimate, checkpoint_seconds=max(costs),
+        non_checkpoint_worker_seconds=overhead, remaining_publications=3,
+        remaining_worker_launches=4, safety_multiplier=1.25,
+        estimate_only=True, required_probes_unchanged=True)
+
 
 def verify_package(root):
     root=Path(root)

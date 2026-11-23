@@ -13,10 +13,44 @@ from pathlib import Path
 import random
 import signal
 import time
+from contextlib import contextmanager
 
 import numpy as np
 import torch
 import torch.distributed as dist
+
+
+class PhaseTimer:
+    """Flushed phase events; no function arguments, credentials or responses."""
+    def __init__(self, path, rank=0):
+        self.path, self.rank, self.records = Path(path), rank, []
+
+    def emit(self, record):
+        value = dict(record, rank=self.rank, timestamp=time.time())
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open('a') as stream:
+            stream.write(json.dumps(value, allow_nan=False)+'\n')
+            stream.flush()
+        if self.rank == 0:
+            print(json.dumps({'phase_timing': value}), flush=True)
+        return value
+
+    @contextmanager
+    def phase(self, name):
+        start = time.perf_counter()
+        self.emit(dict(phase=name, event='start'))
+        try:
+            yield
+        except BaseException as exc:
+            self.records.append(self.emit(dict(phase=name, event='error',
+                seconds=time.perf_counter()-start, error_type=type(exc).__name__)))
+            raise
+        else:
+            self.records.append(self.emit(dict(phase=name, event='end', seconds=time.perf_counter()-start)))
+
+    def call(self, phase_name, function, *args, **kwargs):
+        with self.phase(phase_name):
+            return function(*args, **kwargs)
 
 
 def sha256(path):
