@@ -1,0 +1,2 @@
+# Runtime dependencies come only from the image pinned by SHA256 in WORKFLOW.json.
+# Do not pip-install or acquire kernels/datasets at training runtime.

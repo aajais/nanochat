@@ -1,0 +1,4 @@
+**/__pycache__/**
+**/*.pyc
+workflow_work/**
+wandb/**

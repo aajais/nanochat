@@ -1,0 +1,43 @@
+{
+  "kubernetes": {
+    "namespace": "wandb-launch",
+    "spec": {
+      "template": {
+        "spec": {
+          "containers": [
+            {
+              "name": "train",
+              "env": [
+                {
+                  "name": "WANDB_API_KEY",
+                  "valueFrom": {
+                    "secretKeyRef": {
+                      "key": "password",
+                      "name": "wandb-api-key-wandb-launch"
+                    }
+                  }
+                }
+              ],
+              "resources": {
+                "limits": {
+                  "nvidia.com/gpu": "8",
+                  "cpu": "8",
+                  "memory": "80Gi"
+                },
+                "requests": {
+                  "nvidia.com/gpu": "8",
+                  "cpu": "8",
+                  "memory": "80Gi"
+                }
+              }
+            }
+          ],
+          "restartPolicy": "Never",
+          "terminationGracePeriodSeconds": 15
+        }
+      },
+      "activeDeadlineSeconds": 7113,
+      "backoffLimit": 0
+    }
+  }
+}
