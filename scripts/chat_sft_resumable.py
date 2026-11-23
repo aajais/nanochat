@@ -24,6 +24,7 @@ from nanochat.sft_runtime import (PackedLoader, Deadline, sha256, collective_fla
                                  save_sft, restore_sft, lr_multiplier, barrier,
                                  capture_rng, restore_rng, atomic_json)
 from nanochat.workflow_policy import approved_worker
+from nanochat.sft_runtime import PhaseTimer
 from nanochat.distributed_readiness import verify_hardware
 
 
@@ -94,6 +95,7 @@ def main():
     if not args.cpu_fixture:verify_hardware(world)
     if rank==0:Path(args.output_dir).mkdir(parents=True,exist_ok=True)
     barrier()
+    timing = PhaseTimer(Path(args.output_dir)/f'timings.rank-{rank:04d}.jsonl', rank)
     if ddp and args.device_type != 'cuda':
         raise ValueError('CPU distributed training is not an approved runner')
     divisor = world * args.microbatch * args.context
@@ -127,9 +129,9 @@ def main():
         raw_model = GPT(cfg)
     raw_model.to_empty(device=device)
     raw_model.init_weights()
-    state = torch.load(base_path, map_location=device, weights_only=True)
+    state = timing.call('base_weights_load', torch.load, base_path, map_location=device, weights_only=True)
     state = {k.removeprefix('_orig_mod.'): v for k, v in state.items()}
-    raw_model.load_state_dict(state, strict=True, assign=True)
+    timing.call('base_weights_apply', raw_model.load_state_dict, state, strict=True, assign=True)
     del state
     optimizer = raw_model.setup_optimizer(embedding_lr=args.embedding_lr,
         unembedding_lr=args.unembedding_lr, matrix_lr=args.matrix_lr,
@@ -140,7 +142,8 @@ def main():
         group['weight_decay'] = 0.0
         group['lr'] *= args.lr_scale
         group['initial_lr'] = group['lr']
-    train_rows, val_rows = read_rows(data_dir/'train.jsonl'), read_rows(data_dir/'dev.jsonl')
+    train_rows = timing.call('train_rows_load', read_rows, data_dir/'train.jsonl')
+    val_rows = timing.call('dev_rows_load', read_rows, data_dir/'dev.jsonl')
     loader = PackedLoader(train_rows, args.context, args.microbatch,
                           tokenizer.get_bos_token_id(), manifest['effective_shares'], seed=42+rank)
     source = Path(__file__).resolve().parents[1]
@@ -152,7 +155,7 @@ def main():
     identity = {'config': invariant_config, 'code': code_hashes,
                 'dataset_manifest': sha256(data_dir/'manifest.json'),
                 'tokenizer_sha256': tok_hash, 'base_metadata_sha256': sha256(base_meta_path),
-                'base_weights_sha256': sha256(base_path)}
+                'base_weights_sha256': timing.call('base_weights_hash', sha256, base_path)}
     loop = {'step': 0, 'horizon': None, 'warmup_steps': None, 'input_tokens': 0,
             'assistant_tokens': 0, 'best_dev_loss': None, 'dev_worsening_streak': 0,
             'calibration_seconds': [], 'stop_reason': None}
@@ -163,7 +166,7 @@ def main():
         loop.update(horizon=plan['expected_main_updates'],warmup_steps=max(1,math.ceil(.03*plan['expected_main_updates'])))
     resume_rng = None
     if args.resume:
-        restored = restore_sft(args.resume, raw_model, optimizer, loader, identity, device)
+        restored = timing.call('checkpoint_restore', restore_sft, args.resume, raw_model, optimizer, loader, identity, device)
         resume_rng = capture_rng()
         loop = restored['loop']
         if loop['step'] != restored['step']:
@@ -175,7 +178,7 @@ def main():
             provenance = {key: os.environ[name] for key,name in
                           [('thread_id','WANDB_ARIA_THREAD_ID'),('turn_id','WANDB_ARIA_TURN_ID')]
                           if name in os.environ}
-            run = wandb.init(entity='wandb', project='nanochat-demo', name=args.run_name,
+            run = timing.call('wandb_init', wandb.init, entity='wandb', project='nanochat-demo', name=args.run_name,
                              config={**vars(args), '_wb_agent': provenance, 'identity':identity,
                                      'model':asdict(cfg), 'grad_accum_steps':accumulation})
             for ref, kind in ([] if args.cpu_fixture else [('b1384b1-checkpoint:v2','model'),
@@ -203,16 +206,18 @@ def main():
             if loop['step'] == last_saved_step:
                 return
             checkpoint_rng=capture_rng()
-            folder = save_sft(args.output_dir, loop['step'], raw_model, optimizer, loader, loop, identity)
+            checkpoint_started = time.perf_counter()
+            folder = timing.call('checkpoint_local_save', save_sft, args.output_dir, loop['step'], raw_model, optimizer, loader, loop, identity)
             if rank == 0:
                 art = wandb.Artifact(f'{run.id}-sft-resume', type='model',
                     metadata={'step':loop['step'], 'world_size':world, 'includes_optimizer':True,
                               'format':'nanochat-sft-complete-v1','same_world_size_only':True})
-                art.add_dir(str(folder))
+                timing.call('checkpoint_artifact_staging', art.add_dir, str(folder))
                 if args.cpu_fixture:
                     receipt={'step':loop['step'],'local_only_cpu_fixture':True,'server_verified':False}
                 else:
-                    published=run.log_artifact(art, aliases=[f'step-{loop["step"]}']).wait()
+                    with timing.phase('checkpoint_publish_wait'):
+                        published=run.log_artifact(art, aliases=[f'step-{loop["step"]}']).wait()
                     ref='wandb/nanochat-demo/'+published.name
                     server=wandb.Api().artifact(ref)
                     complete=json.loads((folder/'COMPLETE.json').read_text())
@@ -220,13 +225,17 @@ def main():
                     if set(server.manifest.entries)!=expected or server.digest!=published.digest:
                         raise ValueError('Server checkpoint manifest mismatch')
                     # Actual server-byte verification is mandatory before handoff.
-                    verified=Path(server.download(root=str(Path(args.output_dir)/'verified'/server.version)))
+                    verified=Path(timing.call('checkpoint_download_verify', server.download,
+                        root=str(Path(args.output_dir)/'verified'/server.version)))
                     if sha256(verified/'COMPLETE.json')!=sha256(folder/'COMPLETE.json'):
                         raise ValueError('Server COMPLETE differs')
-                    for name,entry in complete.items():
-                        if sha256(verified/name)!=entry['sha256']:
-                            raise ValueError('Server checkpoint bytes differ: '+name)
+                    with timing.phase('checkpoint_server_sha256'):
+                        for name,entry in complete.items():
+                            if sha256(verified/name)!=entry['sha256']:
+                                raise ValueError('Server checkpoint bytes differ: '+name)
                     receipt={'step':loop['step'],'ref':ref,'digest':server.digest,'server_verified':True}
+                receipt['checkpoint_elapsed_seconds'] = time.perf_counter()-checkpoint_started
+                receipt['checkpoint_bytes'] = sum(p.stat().st_size for p in folder.iterdir() if p.is_file())
                 receipts.append(receipt)
                 atomic_json(Path(args.output_dir)/'uploads.json',receipts)
             barrier()
@@ -355,8 +364,9 @@ def main():
             run.summary['stop_reason']=loop['stop_reason']
             atomic_json(Path(args.output_dir)/'result.json',dict(passed=True,loop=loop,identity=identity,
                 world_size=world,device=str(device),compute_dtype=str(COMPUTE_DTYPE),
-                cpu_fixture=args.cpu_fixture,uploads=receipts,measurements=measurements))
-            run.finish()
+                cpu_fixture=args.cpu_fixture,uploads=receipts,measurements=measurements,
+                phase_timings=timing.records))
+            timing.call('wandb_finish', run.finish)
     except BaseException as exc:
         atomic_json(Path(args.output_dir)/f'failure.rank-{rank:04d}.json',{'passed':False,'rank':rank,'error':type(exc).__name__+': '+str(exc),'step':loop['step']})
         if rank==0 and run is not None:
@@ -364,7 +374,7 @@ def main():
             run.finish(exit_code=1)
         raise  # torchrun must retain the worker's nonzero exit status
     finally:
-        compute_cleanup()
+        timing.call('distributed_cleanup', compute_cleanup)
 
 
 if __name__ == '__main__':

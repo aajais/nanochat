@@ -28,6 +28,7 @@ export PYTHONPATH=.
 export NANOCHAT_DTYPE=float32 TORCHDYNAMO_DISABLE=1 OMP_NUM_THREADS=1
 python test_workflow.py
 python test_eight_rank_contract.py
+python test_readiness_timing.py
 python -m unittest discover -s tests -p 'test_sft_preparation.py'
 python -m unittest discover -s tests -p 'test_conversation_eval_*.py'
 ```
@@ -51,3 +52,7 @@ Missing data downloads, uncertain licensing, incomplete shard restores and
 worker failures must remain visible failures. Dataset notices and the release
 hold must be reviewed before any redistribution; these PRs confer no rights in
 the omitted model or data assets.
+
+See [readiness overhead diagnosis](readiness-overhead-diagnosis.md) for the
+observed publication bottleneck, measured headroom guard and proposed budget
+repartition. These source changes are not authorization for GPU execution.

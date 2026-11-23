@@ -13,8 +13,8 @@ import time
 import traceback
 import uuid
 
-from nanochat.sft_runtime import atomic_json,sha256,validate_checkpoint
-from nanochat.workflow_policy import Allocation,authorize,verify_package,TRAIN_SAVE
+from nanochat.sft_runtime import atomic_json,sha256,validate_checkpoint,PhaseTimer
+from nanochat.workflow_policy import Allocation,authorize,verify_package,TRAIN_SAVE,readiness_projection
 
 ROOT=Path(__file__).resolve().parent
 CHILDREN=set()
@@ -35,13 +35,16 @@ def child(argv,end,log,*,signal_at_step=False,expect_failure=False):
     env=dict(os.environ,WANDB_RUN_ID=uuid.uuid4().hex[:8],WANDB_RESUME='never',
              OMP_NUM_THREADS='1',TORCHDYNAMO_DISABLE='1',HF_HUB_OFFLINE='1',HF_DATASETS_OFFLINE='1')
     log=Path(log);log.parent.mkdir(parents=True,exist_ok=True)
+    timer=PhaseTimer(log.parent/'supervisor-timings.jsonl')
+    started=time.perf_counter()
+    timer.emit(dict(phase='worker_process',event='start',deadline_unix=end))
     with log.open('x') as stream:
         process=subprocess.Popen(argv,stdout=stream,stderr=subprocess.STDOUT,env=env,start_new_session=True,cwd=ROOT)
         CHILDREN.add(process.pid)
         sent=False
         try:
             while process.poll() is None:
-                if time.time()>=end:raise TimeoutError('Stage hard deadline: '+log.name)
+                if time.time()>=end:raise TimeoutError('Stage hard deadline: '+str(log))
                 if signal_at_step and not sent:
                     progress=log.parent/'progress.json'
                     if progress.exists() and json.loads(progress.read_text())['step']>=1:
@@ -60,6 +63,8 @@ def child(argv,end,log,*,signal_at_step=False,expect_failure=False):
                 except subprocess.TimeoutExpired:
                     os.killpg(process.pid,signal.SIGKILL);process.wait()
             CHILDREN.discard(process.pid)
+            timer.emit(dict(phase='worker_process',event='end',seconds=time.perf_counter()-started,
+                exit_code=process.returncode,signal_sent=sent))
 
 def nested_equal(a,b):
     import torch
@@ -112,6 +117,7 @@ def training_command(work,assets,approval,allocation,stage,*,end=None,gpus=1):
         '--max-updates','100000','--no-compile','--load-optimizer','0']
 
 def readiness(work,assets,approval,budget,package_sha,gpus):
+    started=time.perf_counter()
     end=budget.end_for('readiness')-15
     base=training_command(work,assets,approval,budget,'readiness',end=end,gpus=gpus)
     base+=['--fixed-horizon','16','--save-every-seconds','999999','--checkpoint-steps','11','--eval-every','0']
@@ -123,6 +129,11 @@ def readiness(work,assets,approval,budget,package_sha,gpus):
     ar,ap=verify_result(a,'readiness_stop',gpus)
     validate_checkpoint(a/'step-00000011',ar['identity'],gpus)
     verify_partitions(a/'step-00000011',gpus)
+    projection=readiness_projection(ar,time.perf_counter()-started,max(0,end-time.time()))
+    atomic_json(work/'readiness-budget-projection.json',projection)
+    print(json.dumps({'readiness_budget_projection':projection}),flush=True)
+    if not projection['fits']:
+        raise TimeoutError('Measured checkpoint overhead cannot fit all remaining readiness probes; no main handoff')
     child(cmd(b,['--resume',str(a/'step-00000011'),'--stop-after-step','12']),end,b/'worker.log')
     br,bp=verify_result(b,'readiness_stop',gpus);verify_partitions(bp,gpus)
     compare_replay(ap,bp)
@@ -144,7 +155,7 @@ def readiness(work,assets,approval,budget,package_sha,gpus):
         finite_bf16_update=ar['compute_dtype']=='torch.bfloat16',periodic_complete_checkpoint=True,
         fresh_process_exact_replay=True,real_sigterm=sig['signal_sent'],real_deadline=True,
         actual_server_uploads_verified=True,nonzero_worker_failure_propagated=failure['exit_code']!=0,
-        first_result=ar,restored_result=br,world_size=gpus,same_world_size_verified=gpus==8,
+        first_result=ar,restored_result=br,budget_projection=projection,world_size=gpus,same_world_size_verified=gpus==8,
         optimizer_sharding_verified=gpus==8,shutdown_world_size=gpus)
     if not report['finite_bf16_update'] or not report['real_sigterm']:raise ValueError('Incomplete native GPU proof')
     atomic_json(work/'readiness.json',report)

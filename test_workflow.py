@@ -33,8 +33,8 @@ class BudgetAuthorization(unittest.TestCase):
         b=Allocation(1000,now=lambda:1001)
         self.assertEqual(b.end,8113)
         self.assertEqual(b.end_for('main'),5953)
-        self.assertEqual(b.end_for('readiness'),1780)
-        self.assertEqual(b.spec()['main_cap_if_full_readiness_seconds'],4173)
+        self.assertEqual(b.end_for('readiness'),3400)
+        self.assertEqual(b.spec()['main_cap_if_full_readiness_seconds'],2553)
         self.assertEqual(b.end_for('packaging')-b.end_for('evaluation'),600)
         self.assertEqual(b.end_for('evaluation')-b.end_for('main'),1500)
 

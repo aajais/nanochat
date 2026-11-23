@@ -1,7 +1,7 @@
 {
   "owner": "Aayush Jaiswal",
   "scope": "internal demo only",
-  "workflow_sha256": "ea9a8077334fc3956b9a026d741ce7912663ec35be73cf347edb9d6614a7d7ca",
+  "workflow_sha256": "af4e61a9e0a0e729f6f3a43bdc51c910a59e2d468d3646044d3f2a9745e14742",
   "assets": {
     "candidate": {
       "ref": "wandb/nanochat-demo/conversation-sft-cache-candidate:v3",
