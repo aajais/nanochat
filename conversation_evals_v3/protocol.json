@@ -1,0 +1,39 @@
+{
+  "version": "conversation-demo-protocol-v1",
+  "model_context": 2048,
+  "decoding": {
+    "temperature": 0,
+    "strategy": "greedy_argmax",
+    "max_new_tokens_per_turn": 256,
+    "stop_token": "<|assistant_end|>",
+    "tools_enabled": false,
+    "system_message": null
+  },
+  "history": "Preserve actual conversation history; if prompt+256 exceeds 2048, remove oldest complete user/assistant pair. Never truncate current user prompt. Log removals.",
+  "raw_evidence": "Capture actual emitted token IDs, text, stop reason, latency and checkpoint identity. Do NOT count an EOT appended by chat_cli.py after generation as model termination.",
+  "denominators": {
+    "instruction_cases": 40,
+    "multi_turn_conversations": 20,
+    "grounded_cases": 20,
+    "human_review_conversations": 20,
+    "all_responses": 180
+  },
+  "gates": {
+    "instruction_min_pass": 32,
+    "multi_turn_min_pass": 16,
+    "grounded_min_pass": 16,
+    "responses_without_severe_loops_min": 171,
+    "correct_boundaries_min": 171,
+    "arc100_review_at_or_below": 49,
+    "human_review": "No demo-blocking failure category recurring in >=2 of 20 reviewed conversations. Retain written rationale for each label."
+  },
+  "missing_or_error": "Any missing/failed response fails its case and both corresponding response-level gates. Never reduce denominators or silently regenerate.",
+  "scoring": "Exact means strip outer whitespace only; JSON means parse strict JSON with exactly required keys/values and no prose. Every turn check must pass for a multi-turn case. Human checks require a human reviewer, not an unvalidated LLM judge.",
+  "severe_loop": "A response repeats the same contiguous phrase of at least 4 whitespace-delimited words at least 4 consecutive times, or a human reviewer identifies a sustained semantic/paraphrase loop. Automated flags require human adjudication; missing adjudication blocks a pass.",
+  "correct_boundary": "Actual assistant_end emitted within 256 tokens; no tool/control token other than assistant_end, no fabricated next-user turn or additional assistant segment. Human review resolves textual impersonation flags.",
+  "selection_policy": "Initial model plus at most three SFT checkpoints on development only. Freeze selected checkpoint digest and decoding before generating primary acceptance outputs. Run primary once. At most one targeted correction, selected on development; then run reserved correction acceptance once. Never tune on either acceptance output.",
+  "arc100": "Reuse e1384arc-benchmark-inputs:v0 and historical evaluation protocol; do not silently replace its decoding with this conversational protocol.",
+  "status": "FIXTURES_REVISED_NOT_EVALUATED; human review pending; not release approved",
+  "fixture_revision": "v3-explicit-labels-and-location-format",
+  "revision_context": "Changed prompts before any suite model outputs. Two unrelated ad-hoc base CPU smoke prompts were observed before revision; neither acceptance nor development was run. Thresholds, reference answers, exact-scoring policy and decoding unchanged."
+}

@@ -1,0 +1,2556 @@
+{
+  "schema": "scripted-user-turn-evaluation-v1",
+  "split": "development",
+  "examples": [
+    {
+      "id": "development-instruction-001",
+      "capability": "instruction",
+      "family": "exact_copy",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Reply with exactly this label and nothing else: orchid-17"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "orchid-17"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-002",
+      "capability": "instruction",
+      "family": "json_fields",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Return only a JSON object with exactly two string fields: owner is Mira; object is teacup."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "json",
+          "value": {
+            "owner": "Mira",
+            "object": "teacup"
+          }
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-003",
+      "capability": "instruction",
+      "family": "ordered_lines",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Write these words in reverse order, one per line, without bullets: orchid, teacup, notebook."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "notebook\nteacup\norchid"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-004",
+      "capability": "instruction",
+      "family": "extract",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Extract only the color from this record: owner=Mira; color=amber; count=17."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "amber"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-005",
+      "capability": "instruction",
+      "family": "arithmetic_format",
+      "messages": [
+        {
+          "role": "user",
+          "content": "A tray holds 17 orchid seeds. Add 3 seeds. Reply only as total=N, replacing N with the result."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "total=20"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-006",
+      "capability": "instruction",
+      "family": "case_transform",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Convert this label to uppercase; preserve its hyphen and digits. Output only the converted label: orchid-17"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "ORCHID-17"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-007",
+      "capability": "instruction",
+      "family": "exclude_distractors",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Read these labeled entries in order: number=17; object=teacup; color=amber; object=notebook. Copy only the values explicitly labeled object, preserving their order, separated by a comma and one space. Output only those two values."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "teacup, notebook"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-008",
+      "capability": "instruction",
+      "family": "conditional",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Apply this rule: if the number exceeds 25, output orchid; otherwise output amber. The number is 17. Output only the chosen word."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "amber"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-009",
+      "capability": "instruction",
+      "family": "fixed_sentence",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Use exactly this sentence pattern and no extra words: NAME keeps the OBJECT. Substitute Mira for NAME and teacup for OBJECT."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Mira keeps the teacup."
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-010",
+      "capability": "instruction",
+      "family": "two_bullets",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Give exactly two bullet lines. First line must be \"- Oslo\" and second line must be \"- Tuesday\". Do not add a heading."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "- Oslo\n- Tuesday"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-011",
+      "capability": "multi_turn",
+      "family": "remember_details",
+      "messages": [
+        {
+          "role": "user",
+          "content": "For our orchid project, remember: the owner is Mira, the meeting city is Oslo, and the tag is amber-17. Acknowledge briefly."
+        },
+        {
+          "role": "user",
+          "content": "In the orchid project, what city did I name? Reply only with the city."
+        },
+        {
+          "role": "user",
+          "content": "Now return only the tag and owner for that orchid project in the form TAG | OWNER."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Brief acknowledgement; no conflicting details."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "Oslo"
+        },
+        {
+          "kind": "exact",
+          "value": "amber-17 | Mira"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-012",
+      "capability": "multi_turn",
+      "family": "explicit_correction",
+      "messages": [
+        {
+          "role": "user",
+          "content": "The orchid delivery for Mira is scheduled for Tuesday at 09:10. Confirm briefly."
+        },
+        {
+          "role": "user",
+          "content": "Correction for the orchid delivery: the destination is Oslo; ignore any assumption about a destination. Keep the time unchanged. Reply only with the time."
+        },
+        {
+          "role": "user",
+          "content": "For that corrected orchid delivery, output only DESTINATION | TIME using the latest details."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges supplied schedule without inventing a destination."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "09:10"
+        },
+        {
+          "kind": "exact",
+          "value": "Oslo | 09:10"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-013",
+      "capability": "multi_turn",
+      "family": "replace_value",
+      "messages": [
+        {
+          "role": "user",
+          "content": "My orchid inventory has 17 units and label amber. Please remember both."
+        },
+        {
+          "role": "user",
+          "content": "Update the orchid unit count to 24, replacing the old count rather than adding to it. Reply only with the new count."
+        },
+        {
+          "role": "user",
+          "content": "Recall the current orchid count and unchanged label. Reply only as COUNT, LABEL."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges inventory details accurately."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "24"
+        },
+        {
+          "kind": "exact",
+          "value": "24, amber"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-014",
+      "capability": "multi_turn",
+      "family": "reference_resolution",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Mira put a teacup on the east shelf and a notebook in a closed drawer. Remember this arrangement."
+        },
+        {
+          "role": "user",
+          "content": "For Mira's arrangement, where is the teacup? Reply with exactly two words in the form DIRECTION shelf, using the direction from the arrangement. Do not include an article or punctuation."
+        },
+        {
+          "role": "user",
+          "content": "Which item did Mira store in the drawer? Name it only."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges arrangement without swapping the objects."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "east shelf"
+        },
+        {
+          "kind": "exact",
+          "value": "notebook"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-015",
+      "capability": "multi_turn",
+      "family": "changed_preference",
+      "messages": [
+        {
+          "role": "user",
+          "content": "For the orchid poster, my first color choice is amber; its title is Oslo. Remember these."
+        },
+        {
+          "role": "user",
+          "content": "I changed the orchid poster color to black. Keep its title. Reply only with the new color."
+        },
+        {
+          "role": "user",
+          "content": "Now give the latest orchid poster settings, only as TITLE / COLOR."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges the initial color and title without conflict."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "black"
+        },
+        {
+          "kind": "exact",
+          "value": "Oslo / black"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-016",
+      "capability": "grounded",
+      "family": "direct_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Mira manages the orchid club in Oslo. There are 17 members. Meetings happen on Tuesday at 09:10. The storage label is amber. No membership fee is recorded.\nUsing only the record, who manages the club? Reply only with the name."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Mira"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-017",
+      "capability": "grounded",
+      "family": "numeric_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Mira manages the orchid club in Oslo. There are 17 members. Meetings happen on Tuesday at 09:10. The storage label is amber. No membership fee is recorded.\nUsing only this record, how many members are there? Reply only with the number."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "17"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-018",
+      "capability": "grounded",
+      "family": "paired_facts",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Mira manages the orchid club in Oslo. There are 17 members. Meetings happen on Tuesday at 09:10. The storage label is amber. No membership fee is recorded.\nExtract the meeting city and start time. Reply only as CITY | TIME."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Oslo | 09:10"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-019",
+      "capability": "grounded",
+      "family": "unknown_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Mira manages the orchid club in Oslo. There are 17 members. Meetings happen on Tuesday at 09:10. The storage label is amber. No membership fee is recorded.\nWhat is the membership fee? Use only the supplied information; if absent, reply exactly: not stated"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "not stated"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-020",
+      "capability": "grounded",
+      "family": "grounded_summary",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Mira manages the orchid club in Oslo. There are 17 members. Meetings happen on Tuesday at 09:10. The storage label is amber. No membership fee is recorded.\nSummarize the club in one sentence of at most 35 words. Include its manager, city and membership count. Do not invent details."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Exactly one sentence of at most 35 whitespace-delimited words.",
+            "Includes Mira, Oslo, and 17 members.",
+            "All assertions supported by the record."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-021",
+      "capability": "human_review",
+      "family": "practical_planning",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I am Mira, organizing a small orchid club meeting in Oslo. Give three simple preparation steps, without assuming a budget or venue."
+        },
+        {
+          "role": "user",
+          "content": "For this orchid meeting we now have just 20 minutes to prepare. Adapt your suggestions and keep them short."
+        },
+        {
+          "role": "user",
+          "content": "For my orchid meeting, what one missing detail would help you most? Ask just one question."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Three useful, feasible steps.",
+            "No invented budget/venue."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Adapts to the 20-minute limit.",
+            "Concise and consistent with history."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Exactly one relevant clarifying question."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-022",
+      "capability": "human_review",
+      "family": "rewrite_message",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Please make this message polite and concise: \"Mira, bring the teacup to the orchid meeting in Oslo. Don't forget.\""
+        },
+        {
+          "role": "user",
+          "content": "The orchid meeting was postponed. Rewrite that message to ask Mira to wait for a new date; do not suggest a date."
+        },
+        {
+          "role": "user",
+          "content": "Give a short subject line for this postponed orchid meeting message."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Polite rewrite retains the requested object and meeting."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Correctly incorporates postponement.",
+            "Does not invent a new date."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Concise relevant subject line; not an unrelated message."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-023",
+      "capability": "human_review",
+      "family": "explain_and_adapt",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I am Mira and I keep notes about orchid plants. Explain in two simple sentences why labeling my notes can help."
+        },
+        {
+          "role": "user",
+          "content": "For my orchid notes, suggest a label format using the city Oslo and the number 17."
+        },
+        {
+          "role": "user",
+          "content": "For those orchid notes, show just one example of your suggested format."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Clear simple explanation of organization/retrieval.",
+            "Two sentences."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Usable format includes Oslo and 17."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "One example consistent with previous format; no unrelated explanation."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-024",
+      "capability": "human_review",
+      "family": "summary_then_update",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Summarize in two bullets: Mira checked 17 orchid packets in Oslo. All packets were dry. One label was missing. Nothing was sold."
+        },
+        {
+          "role": "user",
+          "content": "Correction to that orchid packet note: two labels were missing, not one. Give the corrected summary in one sentence."
+        },
+        {
+          "role": "user",
+          "content": "Based on the corrected orchid note, were any packets sold? Answer briefly without adding facts."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Two bullets preserve key facts without additions."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Uses two missing labels; no stale count.",
+            "One sentence."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Correctly says no packets were sold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-025",
+      "capability": "human_review",
+      "family": "clarify_ambiguity",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I need help sending the orchid club file to Mira. I have not said which file or how to send it. Ask one useful clarifying question."
+        },
+        {
+          "role": "user",
+          "content": "For that orchid club task, the file is the meeting agenda. I still have not chosen a delivery method. Ask one remaining question."
+        },
+        {
+          "role": "user",
+          "content": "For the orchid agenda, I will use email. Give a short generic next step without inventing Mira's address."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Asks one question about missing file/method; does not invent either."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Asks about remaining delivery method; remembers agenda."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Useful next step; no fabricated email address."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-026",
+      "capability": "instruction",
+      "family": "exact_copy",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Reply with exactly this label and nothing else: cedar-23"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "cedar-23"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-027",
+      "capability": "instruction",
+      "family": "json_fields",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Return only a JSON object with exactly two string fields: owner is Jonah; object is lantern."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "json",
+          "value": {
+            "owner": "Jonah",
+            "object": "lantern"
+          }
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-028",
+      "capability": "instruction",
+      "family": "ordered_lines",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Write these words in reverse order, one per line, without bullets: cedar, lantern, scarf."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "scarf\nlantern\ncedar"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-029",
+      "capability": "instruction",
+      "family": "extract",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Extract only the color from this record: owner=Jonah; color=violet; count=23."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "violet"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-030",
+      "capability": "instruction",
+      "family": "arithmetic_format",
+      "messages": [
+        {
+          "role": "user",
+          "content": "A tray holds 23 cedar seeds. Add 3 seeds. Reply only as total=N, replacing N with the result."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "total=26"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-031",
+      "capability": "instruction",
+      "family": "case_transform",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Convert this label to uppercase; preserve its hyphen and digits. Output only the converted label: cedar-23"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "CEDAR-23"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-032",
+      "capability": "instruction",
+      "family": "exclude_distractors",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Read these labeled entries in order: number=23; object=lantern; color=violet; object=scarf. Copy only the values explicitly labeled object, preserving their order, separated by a comma and one space. Output only those two values."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "lantern, scarf"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-033",
+      "capability": "instruction",
+      "family": "conditional",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Apply this rule: if the number exceeds 25, output cedar; otherwise output violet. The number is 23. Output only the chosen word."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "violet"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-034",
+      "capability": "instruction",
+      "family": "fixed_sentence",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Use exactly this sentence pattern and no extra words: NAME keeps the OBJECT. Substitute Jonah for NAME and lantern for OBJECT."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Jonah keeps the lantern."
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-035",
+      "capability": "instruction",
+      "family": "two_bullets",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Give exactly two bullet lines. First line must be \"- Lima\" and second line must be \"- Thursday\". Do not add a heading."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "- Lima\n- Thursday"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-036",
+      "capability": "multi_turn",
+      "family": "remember_details",
+      "messages": [
+        {
+          "role": "user",
+          "content": "For our cedar project, remember: the owner is Jonah, the meeting city is Lima, and the tag is violet-23. Acknowledge briefly."
+        },
+        {
+          "role": "user",
+          "content": "In the cedar project, what city did I name? Reply only with the city."
+        },
+        {
+          "role": "user",
+          "content": "Now return only the tag and owner for that cedar project in the form TAG | OWNER."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Brief acknowledgement; no conflicting details."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "Lima"
+        },
+        {
+          "kind": "exact",
+          "value": "violet-23 | Jonah"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-037",
+      "capability": "multi_turn",
+      "family": "explicit_correction",
+      "messages": [
+        {
+          "role": "user",
+          "content": "The cedar delivery for Jonah is scheduled for Thursday at 14:20. Confirm briefly."
+        },
+        {
+          "role": "user",
+          "content": "Correction for the cedar delivery: the destination is Lima; ignore any assumption about a destination. Keep the time unchanged. Reply only with the time."
+        },
+        {
+          "role": "user",
+          "content": "For that corrected cedar delivery, output only DESTINATION | TIME using the latest details."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges supplied schedule without inventing a destination."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "14:20"
+        },
+        {
+          "kind": "exact",
+          "value": "Lima | 14:20"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-038",
+      "capability": "multi_turn",
+      "family": "replace_value",
+      "messages": [
+        {
+          "role": "user",
+          "content": "My cedar inventory has 23 units and label violet. Please remember both."
+        },
+        {
+          "role": "user",
+          "content": "Update the cedar unit count to 30, replacing the old count rather than adding to it. Reply only with the new count."
+        },
+        {
+          "role": "user",
+          "content": "Recall the current cedar count and unchanged label. Reply only as COUNT, LABEL."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges inventory details accurately."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "30"
+        },
+        {
+          "kind": "exact",
+          "value": "30, violet"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-039",
+      "capability": "multi_turn",
+      "family": "reference_resolution",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Jonah put a lantern on the west shelf and a scarf in a closed drawer. Remember this arrangement."
+        },
+        {
+          "role": "user",
+          "content": "For Jonah's arrangement, where is the lantern? Reply with exactly two words in the form DIRECTION shelf, using the direction from the arrangement. Do not include an article or punctuation."
+        },
+        {
+          "role": "user",
+          "content": "Which item did Jonah store in the drawer? Name it only."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges arrangement without swapping the objects."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "west shelf"
+        },
+        {
+          "kind": "exact",
+          "value": "scarf"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-040",
+      "capability": "multi_turn",
+      "family": "changed_preference",
+      "messages": [
+        {
+          "role": "user",
+          "content": "For the cedar poster, my first color choice is violet; its title is Lima. Remember these."
+        },
+        {
+          "role": "user",
+          "content": "I changed the cedar poster color to black. Keep its title. Reply only with the new color."
+        },
+        {
+          "role": "user",
+          "content": "Now give the latest cedar poster settings, only as TITLE / COLOR."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges the initial color and title without conflict."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "black"
+        },
+        {
+          "kind": "exact",
+          "value": "Lima / black"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-041",
+      "capability": "grounded",
+      "family": "direct_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Jonah manages the cedar club in Lima. There are 23 members. Meetings happen on Thursday at 14:20. The storage label is violet. No membership fee is recorded.\nUsing only the record, who manages the club? Reply only with the name."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Jonah"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-042",
+      "capability": "grounded",
+      "family": "numeric_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Jonah manages the cedar club in Lima. There are 23 members. Meetings happen on Thursday at 14:20. The storage label is violet. No membership fee is recorded.\nUsing only this record, how many members are there? Reply only with the number."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "23"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-043",
+      "capability": "grounded",
+      "family": "paired_facts",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Jonah manages the cedar club in Lima. There are 23 members. Meetings happen on Thursday at 14:20. The storage label is violet. No membership fee is recorded.\nExtract the meeting city and start time. Reply only as CITY | TIME."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Lima | 14:20"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-044",
+      "capability": "grounded",
+      "family": "unknown_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Jonah manages the cedar club in Lima. There are 23 members. Meetings happen on Thursday at 14:20. The storage label is violet. No membership fee is recorded.\nWhat is the membership fee? Use only the supplied information; if absent, reply exactly: not stated"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "not stated"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-045",
+      "capability": "grounded",
+      "family": "grounded_summary",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Jonah manages the cedar club in Lima. There are 23 members. Meetings happen on Thursday at 14:20. The storage label is violet. No membership fee is recorded.\nSummarize the club in one sentence of at most 35 words. Include its manager, city and membership count. Do not invent details."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Exactly one sentence of at most 35 whitespace-delimited words.",
+            "Includes Jonah, Lima, and 23 members.",
+            "All assertions supported by the record."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-046",
+      "capability": "human_review",
+      "family": "practical_planning",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I am Jonah, organizing a small cedar club meeting in Lima. Give three simple preparation steps, without assuming a budget or venue."
+        },
+        {
+          "role": "user",
+          "content": "For this cedar meeting we now have just 20 minutes to prepare. Adapt your suggestions and keep them short."
+        },
+        {
+          "role": "user",
+          "content": "For my cedar meeting, what one missing detail would help you most? Ask just one question."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Three useful, feasible steps.",
+            "No invented budget/venue."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Adapts to the 20-minute limit.",
+            "Concise and consistent with history."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Exactly one relevant clarifying question."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-047",
+      "capability": "human_review",
+      "family": "rewrite_message",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Please make this message polite and concise: \"Jonah, bring the lantern to the cedar meeting in Lima. Don't forget.\""
+        },
+        {
+          "role": "user",
+          "content": "The cedar meeting was postponed. Rewrite that message to ask Jonah to wait for a new date; do not suggest a date."
+        },
+        {
+          "role": "user",
+          "content": "Give a short subject line for this postponed cedar meeting message."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Polite rewrite retains the requested object and meeting."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Correctly incorporates postponement.",
+            "Does not invent a new date."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Concise relevant subject line; not an unrelated message."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-048",
+      "capability": "human_review",
+      "family": "explain_and_adapt",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I am Jonah and I keep notes about cedar plants. Explain in two simple sentences why labeling my notes can help."
+        },
+        {
+          "role": "user",
+          "content": "For my cedar notes, suggest a label format using the city Lima and the number 23."
+        },
+        {
+          "role": "user",
+          "content": "For those cedar notes, show just one example of your suggested format."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Clear simple explanation of organization/retrieval.",
+            "Two sentences."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Usable format includes Lima and 23."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "One example consistent with previous format; no unrelated explanation."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-049",
+      "capability": "human_review",
+      "family": "summary_then_update",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Summarize in two bullets: Jonah checked 23 cedar packets in Lima. All packets were dry. One label was missing. Nothing was sold."
+        },
+        {
+          "role": "user",
+          "content": "Correction to that cedar packet note: two labels were missing, not one. Give the corrected summary in one sentence."
+        },
+        {
+          "role": "user",
+          "content": "Based on the corrected cedar note, were any packets sold? Answer briefly without adding facts."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Two bullets preserve key facts without additions."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Uses two missing labels; no stale count.",
+            "One sentence."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Correctly says no packets were sold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-050",
+      "capability": "human_review",
+      "family": "clarify_ambiguity",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I need help sending the cedar club file to Jonah. I have not said which file or how to send it. Ask one useful clarifying question."
+        },
+        {
+          "role": "user",
+          "content": "For that cedar club task, the file is the meeting agenda. I still have not chosen a delivery method. Ask one remaining question."
+        },
+        {
+          "role": "user",
+          "content": "For the cedar agenda, I will use email. Give a short generic next step without inventing Jonah's address."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Asks one question about missing file/method; does not invent either."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Asks about remaining delivery method; remembers agenda."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Useful next step; no fabricated email address."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-051",
+      "capability": "instruction",
+      "family": "exact_copy",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Reply with exactly this label and nothing else: willow-31"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "willow-31"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-052",
+      "capability": "instruction",
+      "family": "json_fields",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Return only a JSON object with exactly two string fields: owner is Priya; object is basket."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "json",
+          "value": {
+            "owner": "Priya",
+            "object": "basket"
+          }
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-053",
+      "capability": "instruction",
+      "family": "ordered_lines",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Write these words in reverse order, one per line, without bullets: willow, basket, ribbon."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "ribbon\nbasket\nwillow"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-054",
+      "capability": "instruction",
+      "family": "extract",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Extract only the color from this record: owner=Priya; color=silver; count=31."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "silver"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-055",
+      "capability": "instruction",
+      "family": "arithmetic_format",
+      "messages": [
+        {
+          "role": "user",
+          "content": "A tray holds 31 willow seeds. Add 3 seeds. Reply only as total=N, replacing N with the result."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "total=34"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-056",
+      "capability": "instruction",
+      "family": "case_transform",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Convert this label to uppercase; preserve its hyphen and digits. Output only the converted label: willow-31"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "WILLOW-31"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-057",
+      "capability": "instruction",
+      "family": "exclude_distractors",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Read these labeled entries in order: number=31; object=basket; color=silver; object=ribbon. Copy only the values explicitly labeled object, preserving their order, separated by a comma and one space. Output only those two values."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "basket, ribbon"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-058",
+      "capability": "instruction",
+      "family": "conditional",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Apply this rule: if the number exceeds 25, output willow; otherwise output silver. The number is 31. Output only the chosen word."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "willow"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-059",
+      "capability": "instruction",
+      "family": "fixed_sentence",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Use exactly this sentence pattern and no extra words: NAME keeps the OBJECT. Substitute Priya for NAME and basket for OBJECT."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Priya keeps the basket."
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-060",
+      "capability": "instruction",
+      "family": "two_bullets",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Give exactly two bullet lines. First line must be \"- Bern\" and second line must be \"- Friday\". Do not add a heading."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "- Bern\n- Friday"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-061",
+      "capability": "multi_turn",
+      "family": "remember_details",
+      "messages": [
+        {
+          "role": "user",
+          "content": "For our willow project, remember: the owner is Priya, the meeting city is Bern, and the tag is silver-31. Acknowledge briefly."
+        },
+        {
+          "role": "user",
+          "content": "In the willow project, what city did I name? Reply only with the city."
+        },
+        {
+          "role": "user",
+          "content": "Now return only the tag and owner for that willow project in the form TAG | OWNER."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Brief acknowledgement; no conflicting details."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "Bern"
+        },
+        {
+          "kind": "exact",
+          "value": "silver-31 | Priya"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-062",
+      "capability": "multi_turn",
+      "family": "explicit_correction",
+      "messages": [
+        {
+          "role": "user",
+          "content": "The willow delivery for Priya is scheduled for Friday at 11:40. Confirm briefly."
+        },
+        {
+          "role": "user",
+          "content": "Correction for the willow delivery: the destination is Bern; ignore any assumption about a destination. Keep the time unchanged. Reply only with the time."
+        },
+        {
+          "role": "user",
+          "content": "For that corrected willow delivery, output only DESTINATION | TIME using the latest details."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges supplied schedule without inventing a destination."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "11:40"
+        },
+        {
+          "kind": "exact",
+          "value": "Bern | 11:40"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-063",
+      "capability": "multi_turn",
+      "family": "replace_value",
+      "messages": [
+        {
+          "role": "user",
+          "content": "My willow inventory has 31 units and label silver. Please remember both."
+        },
+        {
+          "role": "user",
+          "content": "Update the willow unit count to 38, replacing the old count rather than adding to it. Reply only with the new count."
+        },
+        {
+          "role": "user",
+          "content": "Recall the current willow count and unchanged label. Reply only as COUNT, LABEL."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges inventory details accurately."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "38"
+        },
+        {
+          "kind": "exact",
+          "value": "38, silver"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-064",
+      "capability": "multi_turn",
+      "family": "reference_resolution",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Priya put a basket on the north shelf and a ribbon in a closed drawer. Remember this arrangement."
+        },
+        {
+          "role": "user",
+          "content": "For Priya's arrangement, where is the basket? Reply with exactly two words in the form DIRECTION shelf, using the direction from the arrangement. Do not include an article or punctuation."
+        },
+        {
+          "role": "user",
+          "content": "Which item did Priya store in the drawer? Name it only."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges arrangement without swapping the objects."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "north shelf"
+        },
+        {
+          "kind": "exact",
+          "value": "ribbon"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-065",
+      "capability": "multi_turn",
+      "family": "changed_preference",
+      "messages": [
+        {
+          "role": "user",
+          "content": "For the willow poster, my first color choice is silver; its title is Bern. Remember these."
+        },
+        {
+          "role": "user",
+          "content": "I changed the willow poster color to black. Keep its title. Reply only with the new color."
+        },
+        {
+          "role": "user",
+          "content": "Now give the latest willow poster settings, only as TITLE / COLOR."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges the initial color and title without conflict."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "black"
+        },
+        {
+          "kind": "exact",
+          "value": "Bern / black"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-066",
+      "capability": "grounded",
+      "family": "direct_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Priya manages the willow club in Bern. There are 31 members. Meetings happen on Friday at 11:40. The storage label is silver. No membership fee is recorded.\nUsing only the record, who manages the club? Reply only with the name."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Priya"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-067",
+      "capability": "grounded",
+      "family": "numeric_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Priya manages the willow club in Bern. There are 31 members. Meetings happen on Friday at 11:40. The storage label is silver. No membership fee is recorded.\nUsing only this record, how many members are there? Reply only with the number."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "31"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-068",
+      "capability": "grounded",
+      "family": "paired_facts",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Priya manages the willow club in Bern. There are 31 members. Meetings happen on Friday at 11:40. The storage label is silver. No membership fee is recorded.\nExtract the meeting city and start time. Reply only as CITY | TIME."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Bern | 11:40"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-069",
+      "capability": "grounded",
+      "family": "unknown_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Priya manages the willow club in Bern. There are 31 members. Meetings happen on Friday at 11:40. The storage label is silver. No membership fee is recorded.\nWhat is the membership fee? Use only the supplied information; if absent, reply exactly: not stated"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "not stated"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-070",
+      "capability": "grounded",
+      "family": "grounded_summary",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Priya manages the willow club in Bern. There are 31 members. Meetings happen on Friday at 11:40. The storage label is silver. No membership fee is recorded.\nSummarize the club in one sentence of at most 35 words. Include its manager, city and membership count. Do not invent details."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Exactly one sentence of at most 35 whitespace-delimited words.",
+            "Includes Priya, Bern, and 31 members.",
+            "All assertions supported by the record."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-071",
+      "capability": "human_review",
+      "family": "practical_planning",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I am Priya, organizing a small willow club meeting in Bern. Give three simple preparation steps, without assuming a budget or venue."
+        },
+        {
+          "role": "user",
+          "content": "For this willow meeting we now have just 20 minutes to prepare. Adapt your suggestions and keep them short."
+        },
+        {
+          "role": "user",
+          "content": "For my willow meeting, what one missing detail would help you most? Ask just one question."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Three useful, feasible steps.",
+            "No invented budget/venue."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Adapts to the 20-minute limit.",
+            "Concise and consistent with history."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Exactly one relevant clarifying question."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-072",
+      "capability": "human_review",
+      "family": "rewrite_message",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Please make this message polite and concise: \"Priya, bring the basket to the willow meeting in Bern. Don't forget.\""
+        },
+        {
+          "role": "user",
+          "content": "The willow meeting was postponed. Rewrite that message to ask Priya to wait for a new date; do not suggest a date."
+        },
+        {
+          "role": "user",
+          "content": "Give a short subject line for this postponed willow meeting message."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Polite rewrite retains the requested object and meeting."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Correctly incorporates postponement.",
+            "Does not invent a new date."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Concise relevant subject line; not an unrelated message."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-073",
+      "capability": "human_review",
+      "family": "explain_and_adapt",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I am Priya and I keep notes about willow plants. Explain in two simple sentences why labeling my notes can help."
+        },
+        {
+          "role": "user",
+          "content": "For my willow notes, suggest a label format using the city Bern and the number 31."
+        },
+        {
+          "role": "user",
+          "content": "For those willow notes, show just one example of your suggested format."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Clear simple explanation of organization/retrieval.",
+            "Two sentences."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Usable format includes Bern and 31."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "One example consistent with previous format; no unrelated explanation."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-074",
+      "capability": "human_review",
+      "family": "summary_then_update",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Summarize in two bullets: Priya checked 31 willow packets in Bern. All packets were dry. One label was missing. Nothing was sold."
+        },
+        {
+          "role": "user",
+          "content": "Correction to that willow packet note: two labels were missing, not one. Give the corrected summary in one sentence."
+        },
+        {
+          "role": "user",
+          "content": "Based on the corrected willow note, were any packets sold? Answer briefly without adding facts."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Two bullets preserve key facts without additions."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Uses two missing labels; no stale count.",
+            "One sentence."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Correctly says no packets were sold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-075",
+      "capability": "human_review",
+      "family": "clarify_ambiguity",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I need help sending the willow club file to Priya. I have not said which file or how to send it. Ask one useful clarifying question."
+        },
+        {
+          "role": "user",
+          "content": "For that willow club task, the file is the meeting agenda. I still have not chosen a delivery method. Ask one remaining question."
+        },
+        {
+          "role": "user",
+          "content": "For the willow agenda, I will use email. Give a short generic next step without inventing Priya's address."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Asks one question about missing file/method; does not invent either."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Asks about remaining delivery method; remembers agenda."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Useful next step; no fabricated email address."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-076",
+      "capability": "instruction",
+      "family": "exact_copy",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Reply with exactly this label and nothing else: maple-42"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "maple-42"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-077",
+      "capability": "instruction",
+      "family": "json_fields",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Return only a JSON object with exactly two string fields: owner is Felix; object is pencil."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "json",
+          "value": {
+            "owner": "Felix",
+            "object": "pencil"
+          }
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-078",
+      "capability": "instruction",
+      "family": "ordered_lines",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Write these words in reverse order, one per line, without bullets: maple, pencil, folder."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "folder\npencil\nmaple"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-079",
+      "capability": "instruction",
+      "family": "extract",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Extract only the color from this record: owner=Felix; color=coral; count=42."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "coral"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-080",
+      "capability": "instruction",
+      "family": "arithmetic_format",
+      "messages": [
+        {
+          "role": "user",
+          "content": "A tray holds 42 maple seeds. Add 3 seeds. Reply only as total=N, replacing N with the result."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "total=45"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-081",
+      "capability": "instruction",
+      "family": "case_transform",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Convert this label to uppercase; preserve its hyphen and digits. Output only the converted label: maple-42"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "MAPLE-42"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-082",
+      "capability": "instruction",
+      "family": "exclude_distractors",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Read these labeled entries in order: number=42; object=pencil; color=coral; object=folder. Copy only the values explicitly labeled object, preserving their order, separated by a comma and one space. Output only those two values."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "pencil, folder"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-083",
+      "capability": "instruction",
+      "family": "conditional",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Apply this rule: if the number exceeds 25, output maple; otherwise output coral. The number is 42. Output only the chosen word."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "maple"
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-084",
+      "capability": "instruction",
+      "family": "fixed_sentence",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Use exactly this sentence pattern and no extra words: NAME keeps the OBJECT. Substitute Felix for NAME and pencil for OBJECT."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Felix keeps the pencil."
+        }
+      ]
+    },
+    {
+      "id": "development-instruction-085",
+      "capability": "instruction",
+      "family": "two_bullets",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Give exactly two bullet lines. First line must be \"- Perth\" and second line must be \"- Monday\". Do not add a heading."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "- Perth\n- Monday"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-086",
+      "capability": "multi_turn",
+      "family": "remember_details",
+      "messages": [
+        {
+          "role": "user",
+          "content": "For our maple project, remember: the owner is Felix, the meeting city is Perth, and the tag is coral-42. Acknowledge briefly."
+        },
+        {
+          "role": "user",
+          "content": "In the maple project, what city did I name? Reply only with the city."
+        },
+        {
+          "role": "user",
+          "content": "Now return only the tag and owner for that maple project in the form TAG | OWNER."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Brief acknowledgement; no conflicting details."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "Perth"
+        },
+        {
+          "kind": "exact",
+          "value": "coral-42 | Felix"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-087",
+      "capability": "multi_turn",
+      "family": "explicit_correction",
+      "messages": [
+        {
+          "role": "user",
+          "content": "The maple delivery for Felix is scheduled for Monday at 16:30. Confirm briefly."
+        },
+        {
+          "role": "user",
+          "content": "Correction for the maple delivery: the destination is Perth; ignore any assumption about a destination. Keep the time unchanged. Reply only with the time."
+        },
+        {
+          "role": "user",
+          "content": "For that corrected maple delivery, output only DESTINATION | TIME using the latest details."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges supplied schedule without inventing a destination."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "16:30"
+        },
+        {
+          "kind": "exact",
+          "value": "Perth | 16:30"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-088",
+      "capability": "multi_turn",
+      "family": "replace_value",
+      "messages": [
+        {
+          "role": "user",
+          "content": "My maple inventory has 42 units and label coral. Please remember both."
+        },
+        {
+          "role": "user",
+          "content": "Update the maple unit count to 49, replacing the old count rather than adding to it. Reply only with the new count."
+        },
+        {
+          "role": "user",
+          "content": "Recall the current maple count and unchanged label. Reply only as COUNT, LABEL."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges inventory details accurately."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "49"
+        },
+        {
+          "kind": "exact",
+          "value": "49, coral"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-089",
+      "capability": "multi_turn",
+      "family": "reference_resolution",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Felix put a pencil on the south shelf and a folder in a closed drawer. Remember this arrangement."
+        },
+        {
+          "role": "user",
+          "content": "For Felix's arrangement, where is the pencil? Reply with exactly two words in the form DIRECTION shelf, using the direction from the arrangement. Do not include an article or punctuation."
+        },
+        {
+          "role": "user",
+          "content": "Which item did Felix store in the drawer? Name it only."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges arrangement without swapping the objects."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "south shelf"
+        },
+        {
+          "kind": "exact",
+          "value": "folder"
+        }
+      ]
+    },
+    {
+      "id": "development-multi_turn-090",
+      "capability": "multi_turn",
+      "family": "changed_preference",
+      "messages": [
+        {
+          "role": "user",
+          "content": "For the maple poster, my first color choice is coral; its title is Perth. Remember these."
+        },
+        {
+          "role": "user",
+          "content": "I changed the maple poster color to black. Keep its title. Reply only with the new color."
+        },
+        {
+          "role": "user",
+          "content": "Now give the latest maple poster settings, only as TITLE / COLOR."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Acknowledges the initial color and title without conflict."
+          ]
+        },
+        {
+          "kind": "exact",
+          "value": "black"
+        },
+        {
+          "kind": "exact",
+          "value": "Perth / black"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-091",
+      "capability": "grounded",
+      "family": "direct_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Felix manages the maple club in Perth. There are 42 members. Meetings happen on Monday at 16:30. The storage label is coral. No membership fee is recorded.\nUsing only the record, who manages the club? Reply only with the name."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Felix"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-092",
+      "capability": "grounded",
+      "family": "numeric_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Felix manages the maple club in Perth. There are 42 members. Meetings happen on Monday at 16:30. The storage label is coral. No membership fee is recorded.\nUsing only this record, how many members are there? Reply only with the number."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "42"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-093",
+      "capability": "grounded",
+      "family": "paired_facts",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Felix manages the maple club in Perth. There are 42 members. Meetings happen on Monday at 16:30. The storage label is coral. No membership fee is recorded.\nExtract the meeting city and start time. Reply only as CITY | TIME."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "Perth | 16:30"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-094",
+      "capability": "grounded",
+      "family": "unknown_fact",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Felix manages the maple club in Perth. There are 42 members. Meetings happen on Monday at 16:30. The storage label is coral. No membership fee is recorded.\nWhat is the membership fee? Use only the supplied information; if absent, reply exactly: not stated"
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "exact",
+          "value": "not stated"
+        }
+      ]
+    },
+    {
+      "id": "development-grounded-095",
+      "capability": "grounded",
+      "family": "grounded_summary",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Local fictional record: Felix manages the maple club in Perth. There are 42 members. Meetings happen on Monday at 16:30. The storage label is coral. No membership fee is recorded.\nSummarize the club in one sentence of at most 35 words. Include its manager, city and membership count. Do not invent details."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Exactly one sentence of at most 35 whitespace-delimited words.",
+            "Includes Felix, Perth, and 42 members.",
+            "All assertions supported by the record."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-096",
+      "capability": "human_review",
+      "family": "practical_planning",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I am Felix, organizing a small maple club meeting in Perth. Give three simple preparation steps, without assuming a budget or venue."
+        },
+        {
+          "role": "user",
+          "content": "For this maple meeting we now have just 20 minutes to prepare. Adapt your suggestions and keep them short."
+        },
+        {
+          "role": "user",
+          "content": "For my maple meeting, what one missing detail would help you most? Ask just one question."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Three useful, feasible steps.",
+            "No invented budget/venue."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Adapts to the 20-minute limit.",
+            "Concise and consistent with history."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Exactly one relevant clarifying question."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-097",
+      "capability": "human_review",
+      "family": "rewrite_message",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Please make this message polite and concise: \"Felix, bring the pencil to the maple meeting in Perth. Don't forget.\""
+        },
+        {
+          "role": "user",
+          "content": "The maple meeting was postponed. Rewrite that message to ask Felix to wait for a new date; do not suggest a date."
+        },
+        {
+          "role": "user",
+          "content": "Give a short subject line for this postponed maple meeting message."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Polite rewrite retains the requested object and meeting."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Correctly incorporates postponement.",
+            "Does not invent a new date."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Concise relevant subject line; not an unrelated message."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-098",
+      "capability": "human_review",
+      "family": "explain_and_adapt",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I am Felix and I keep notes about maple plants. Explain in two simple sentences why labeling my notes can help."
+        },
+        {
+          "role": "user",
+          "content": "For my maple notes, suggest a label format using the city Perth and the number 42."
+        },
+        {
+          "role": "user",
+          "content": "For those maple notes, show just one example of your suggested format."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Clear simple explanation of organization/retrieval.",
+            "Two sentences."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Usable format includes Perth and 42."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "One example consistent with previous format; no unrelated explanation."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-099",
+      "capability": "human_review",
+      "family": "summary_then_update",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Summarize in two bullets: Felix checked 42 maple packets in Perth. All packets were dry. One label was missing. Nothing was sold."
+        },
+        {
+          "role": "user",
+          "content": "Correction to that maple packet note: two labels were missing, not one. Give the corrected summary in one sentence."
+        },
+        {
+          "role": "user",
+          "content": "Based on the corrected maple note, were any packets sold? Answer briefly without adding facts."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Two bullets preserve key facts without additions."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Uses two missing labels; no stale count.",
+            "One sentence."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Correctly says no packets were sold."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "development-human_review-100",
+      "capability": "human_review",
+      "family": "clarify_ambiguity",
+      "messages": [
+        {
+          "role": "user",
+          "content": "I need help sending the maple club file to Felix. I have not said which file or how to send it. Ask one useful clarifying question."
+        },
+        {
+          "role": "user",
+          "content": "For that maple club task, the file is the meeting agenda. I still have not chosen a delivery method. Ask one remaining question."
+        },
+        {
+          "role": "user",
+          "content": "For the maple agenda, I will use email. Give a short generic next step without inventing Felix's address."
+        }
+      ],
+      "turn_checks": [
+        {
+          "kind": "human",
+          "criteria": [
+            "Asks one question about missing file/method; does not invent either."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Asks about remaining delivery method; remembers agenda."
+          ]
+        },
+        {
+          "kind": "human",
+          "criteria": [
+            "Useful next step; no fabricated email address."
+          ]
+        }
+      ]
+    }
+  ],
+  "reference_handling": "turn_checks are scorer-only; NEVER include in model prompts",
+  "conversation_handling": "Interleave each scripted user turn with the actual preceding model reply, never a reference reply."
+}
