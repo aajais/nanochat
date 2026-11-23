@@ -50,14 +50,17 @@ def save_checkpoint(checkpoint_dir, step, model_data, optimizer_data, meta_data,
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta_data, f, indent=2)
         logger.info(f"Saved metadata to: {meta_path}")
-        from nanochat.observability import log_checkpoint
-        log_checkpoint(checkpoint_dir, step)
     # Note that optimizer state is sharded across ranks, so each rank must save its own.
     if optimizer_data is not None:
         os.makedirs(checkpoint_dir, exist_ok=True)
         optimizer_path = os.path.join(checkpoint_dir, f"optim_{step:06d}_rank{rank:d}.pt")
         torch.save(optimizer_data, optimizer_path)
         logger.info(f"Saved optimizer state to: {optimizer_path}")
+    # Publish only after the rank-zero optimizer file has been written.
+    # Optimizer-inclusive publication is explicitly single-process only.
+    if rank == 0:
+        from nanochat.observability import log_checkpoint
+        log_checkpoint(checkpoint_dir, step)
 
 def load_checkpoint(checkpoint_dir, step, device, load_optimizer=False, rank=0):
     # Load the model state

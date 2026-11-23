@@ -82,14 +82,27 @@ def optimizer_metrics(model, optimizer):
 
 
 def log_checkpoint(checkpoint_dir, step):
-    """Opt-in model + metadata versioning; intentionally excludes optimizer shards."""
+    """Version weights/metadata; opt-in optimizer capture requires one process.
+
+    Includes optimizer state, not a guarantee of bit-exact dataloader/RNG resume.
+    """
     run = active_run()
     if run is None or os.getenv("NANOCHAT_LOG_CHECKPOINTS") != "1":
         return
+    include_optimizer = os.getenv("NANOCHAT_LOG_OPTIMIZER") == "1"
+    filenames = [f"model_{step:06d}.pt", f"meta_{step:06d}.json"]
+    if include_optimizer:
+        world_size = run.config.get("runtime", {}).get("world_size", 1)
+        if int(world_size) != 1 or int(os.getenv("WORLD_SIZE", "1")) != 1:
+            raise RuntimeError("Optimizer-inclusive checkpoint publication requires one process")
+        filenames.append(f"optim_{step:06d}_rank0.pt")
+    for filename in filenames:
+        if not (Path(checkpoint_dir) / filename).is_file():
+            raise FileNotFoundError(f"Incomplete checkpoint: {filename}")
     artifact = wandb.Artifact(f"{run.id}-checkpoint", type="model",
-                              metadata={"step": step, "includes_optimizer": False,
+                              metadata={"step": step, "includes_optimizer": include_optimizer,
                                         "inputs": run.config.get("artifact_inputs_verified_rank0", [])})
-    for filename in (f"model_{step:06d}.pt", f"meta_{step:06d}.json"):
+    for filename in filenames:
         artifact.add_file(str(Path(checkpoint_dir) / filename))
     run.log_artifact(artifact, aliases=["latest", f"step-{step}"])
 

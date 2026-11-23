@@ -46,7 +46,8 @@ def _load_flash_attention_3():
         return None
 
 
-_fa3 = _load_flash_attention_3()
+# This bounded smoke pins PyTorch SDPA: no remote kernel acquisition or FA3.
+_fa3 = None
 HAS_FA3 = _fa3 is not None
 
 # Override for testing: set to 'fa3', 'sdpa', or None (auto)
