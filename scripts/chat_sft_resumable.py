@@ -23,6 +23,7 @@ from nanochat.tokenizer import RustBPETokenizer
 from nanochat.sft_runtime import (PackedLoader, Deadline, sha256, collective_flag,
                                  save_sft, restore_sft, lr_multiplier, barrier,
                                  capture_rng, restore_rng, atomic_json)
+from nanochat.sft_runtime import coordinate_publication
 from nanochat.workflow_policy import approved_worker
 from nanochat.sft_runtime import PhaseTimer
 from nanochat.distributed_readiness import verify_hardware
@@ -208,7 +209,7 @@ def main():
             checkpoint_rng=capture_rng()
             checkpoint_started = time.perf_counter()
             folder = timing.call('checkpoint_local_save', save_sft, args.output_dir, loop['step'], raw_model, optimizer, loader, loop, identity)
-            if rank == 0:
+            def publish():
                 art = wandb.Artifact(f'{run.id}-sft-resume', type='model',
                     metadata={'step':loop['step'], 'world_size':world, 'includes_optimizer':True,
                               'format':'nanochat-sft-complete-v1','same_world_size_only':True})
@@ -238,7 +239,13 @@ def main():
                 receipt['checkpoint_bytes'] = sum(p.stat().st_size for p in folder.iterdir() if p.is_file())
                 receipts.append(receipt)
                 atomic_json(Path(args.output_dir)/'uploads.json',receipts)
-            barrier()
+                return receipt
+
+            # Peers wait off the NCCL process group during staging, upload and
+            # server-byte verification. A committed artifact alone is not proof.
+            timing.call('checkpoint_publication_coordination', coordinate_publication,
+                Path(args.output_dir)/f'publication-{loop["step"]:08d}.json',
+                publish, args.deadline_unix)
             restore_rng(checkpoint_rng)  # Service/upload bookkeeping must not perturb continuation.
             last_save, last_saved_step = time.time(), loop['step']
 
