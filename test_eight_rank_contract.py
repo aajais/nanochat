@@ -43,14 +43,14 @@ class Contract(unittest.TestCase):
             self.assertIn('scripts.chat_sft_resumable',cmd)
 
     def test_sigterm_targets_all_workers_not_launcher(self):
-        with tempfile.TemporaryDirectory(dir='/workspace') as d:
+        with tempfile.TemporaryDirectory() as d:
             atomic_json(Path(d)/'progress.json',dict(worker_pids=list(range(100,108))))
             with patch.object(workflow.os,'kill') as kill,patch.object(workflow.os,'killpg') as group:
                 workflow.terminate_workers(type('P',(),{'pid':99})(),d)
                 self.assertEqual(kill.call_count,8);group.assert_not_called()
 
     def test_missing_eighth_checkpoint_shard_rejected(self):
-        with tempfile.TemporaryDirectory(dir='/workspace') as d:
+        with tempfile.TemporaryDirectory() as d:
             root=Path(d);identity={'code':'synthetic-test-only'}
             atomic_torch(root/'model.pt',{});atomic_json(root/'loop.json',dict(world_size=8,identity=identity))
             for rank in range(7):atomic_torch(root/f'rank-{rank:04d}.pt',{})
@@ -72,12 +72,12 @@ class Contract(unittest.TestCase):
         self.assertEqual(counts,[2,2,2,2,2,0,0,0])
 
     def test_one_rank_optimizer_evidence_cannot_pass_eight_rank_gate(self):
-        with tempfile.TemporaryDirectory(dir='/workspace') as d:
+        with tempfile.TemporaryDirectory() as d:
             for rank in range(8):atomic_torch(Path(d)/f'rank-{rank:04d}.pt',{'optimizer_partition':dict(rank=rank,world_size=1,validated=True,optimizer_class='MuonAdamW')})
             with self.assertRaises(ValueError):workflow.verify_partitions(d,8)
 
     def test_token_plan_saved_logged_before_handoff(self):
-        with tempfile.TemporaryDirectory(dir='/workspace') as d:
+        with tempfile.TemporaryDirectory() as d:
             root=Path(d);path=root/'proof.json';atomic_json(path,proof())
             run=type('Run',(),{'log':lambda self,record:setattr(self,'record',record)})()
             with patch('builtins.print') as printed:

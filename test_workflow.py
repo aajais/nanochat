@@ -44,7 +44,7 @@ class BudgetAuthorization(unittest.TestCase):
         with self.assertRaises(TimeoutError):Allocation(1000,now=lambda:1000+CAP)
 
     def test_owner_is_not_approval(self):
-        with tempfile.TemporaryDirectory(dir='/workspace') as d:
+        with tempfile.TemporaryDirectory() as d:
             path=Path(d)/'approval.json';atomic_json(path,dict(workflow_sha256='x',assets={},scope='internal demo only',owner='Aayush Jaiswal'))
             with self.assertRaises(PermissionError):authorize(path,'x',{})
 
@@ -92,7 +92,7 @@ class Handoff(unittest.TestCase):
 class ProductionWorker(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.temp=tempfile.TemporaryDirectory(dir='/workspace/nanochat_sft',prefix='production-cpu-')
+        cls.temp=tempfile.TemporaryDirectory(prefix='production-cpu-')
         cls.root=Path(cls.temp.name);fixture(cls.root);cls.end=time.time()+150
         cls.argv=[sys.executable,'-m','scripts.chat_sft_resumable','--data-dir',str(cls.root/'data'),
             '--dataset-artifact','synthetic/fixture/cache:v0','--tokenizer-dir',str(cls.root/'tokenizer'),

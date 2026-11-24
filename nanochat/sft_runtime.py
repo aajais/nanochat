@@ -97,6 +97,88 @@ def collective_flag(flag, device):
     return bool(t.item())
 
 
+class _PublicationExpired(BaseException):
+    """Escape SDK Exception/retry handlers when the stage budget expires."""
+
+
+@contextmanager
+def _publication_deadline(deadline_unix):
+    """Interrupt rank-zero remote I/O without changing SIGTERM save handling.
+
+    The worker supervisor remains the hard process-level backstop (Python cannot
+    interrupt every C extension). Never replace an existing process alarm.
+    """
+    remaining = deadline_unix - time.time()
+    if not math.isfinite(remaining) or remaining <= 0:
+        raise TimeoutError('Checkpoint publication deadline expired')
+    if signal.getitimer(signal.ITIMER_REAL) != (0.0, 0.0):
+        raise RuntimeError('Checkpoint publication cannot replace an active alarm')
+
+    def expired(*_):
+        raise _PublicationExpired()
+
+    previous = signal.signal(signal.SIGALRM, expired)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, remaining)
+        try:
+            yield
+        except _PublicationExpired:
+            raise TimeoutError('Checkpoint publication deadline expired') from None
+        if time.time() >= deadline_unix:
+            raise TimeoutError('Checkpoint publication deadline expired')
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def coordinate_publication(status_path, publish, deadline_unix):
+    """Run rank-zero publication while peers poll the shared filesystem.
+
+    No distributed operation may span remote I/O: a barrier/broadcast would put
+    peers on the NCCL watchdog even while rank zero is making upload progress.
+    The status path must be unique to this checkpoint attempt and OUTSIDE the
+    checkpoint directory, so it cannot change the uploaded COMPLETE manifest.
+    Success is published only after the callback's server-byte verification.
+    Failure/missing publisher/timeout cannot authorize another training update.
+    """
+    if not math.isfinite(deadline_unix) or time.time() >= deadline_unix:
+        raise TimeoutError('Checkpoint publication deadline expired')
+    status_path = Path(status_path)
+    rank, _ = rank_world()
+    if rank == 0:
+        # save_sft creates a new directory per step, so a prior status is a bug.
+        if status_path.exists():
+            raise FileExistsError('Checkpoint publication status already exists')
+        try:
+            with _publication_deadline(deadline_unix):
+                receipt = publish()
+        except BaseException as exc:
+            atomic_json(status_path, {'passed': False, 'deadline_unix': deadline_unix,
+                                      'error_type': type(exc).__name__, 'error': str(exc)})
+            raise
+        # Exit/disarm the timed phase before exposing success. A peer must never
+        # observe a successful receipt that rank zero can subsequently revoke.
+        atomic_json(status_path, {'passed': True, 'deadline_unix': deadline_unix,
+                                  'receipt': receipt})
+        return receipt
+
+    while time.time() < deadline_unix:
+        if status_path.exists():
+            status = json.loads(status_path.read_text())
+            if status.get('deadline_unix') != deadline_unix:
+                raise ValueError('Stale checkpoint publication status')
+            if status.get('passed') is not True:
+                error = 'Checkpoint publication failed: ' + status.get('error', 'unknown error')
+                if status.get('error_type') == 'TimeoutError':
+                    raise TimeoutError(error)
+                raise RuntimeError(error)
+            if time.time() >= deadline_unix:
+                break
+            return status['receipt']
+        time.sleep(min(0.05, max(0, deadline_unix - time.time())))
+    raise TimeoutError('Checkpoint publication deadline expired while waiting for rank zero')
+
+
 class PackedLoader:
     """Deterministic weighted draws with replacement, complete-conversation packing.
 
